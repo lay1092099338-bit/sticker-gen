@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 专业贴纸编辑器 - Fabric.js</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;700&family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=ZCOOL+KuaiLe&family=Long+Cang&family=ZCOOL+QingKe+HuangYou&family=Zhi+Mang+Xing&family=Bebas+Neue&family=Oswald:wght@400;700&family=Playfair+Display:wght@400;700&family=Raleway:wght@400;700&family=Pacifico&family=Dancing+Script:wght@400;700&family=Righteous&family=Lobster&family=Permanent+Marker&family=Caveat:wght@400;700&family=Satisfy&family=Great+Vibes&family=Sacramento&family=Shadows+Into+Light&family=Indie+Flower&family=Amatic+SC:wght@400;700&family=Ultra&family=Fredoka+One&family=Roboto:wght@300;400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;700&family=Nunito:wght@400;700&family=Quicksand:wght@400;700&family=Josefin+Sans:wght@400;700&family=Varela+Round&family=Comfortaa:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f1a;--panel-bg:#1a1a2e;--panel-border:#2d2d44;
+  --text:#e8e8f0;--text-light:#8888a0;--accent:#f472b6;--accent-hover:#ec4899;
+  --success:#10b981;--warning:#f59e0b;--error:#ef4444;
+}
+body{font-family:'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow:hidden}
+
+/* 顶部栏 */
+.top-bar{height:56px;background:var(--panel-bg);border-bottom:1px solid var(--panel-border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;position:relative;z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700;color:var(--accent)}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),#c084fc);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.top-actions{display:flex;gap:12px;align-items:center}
+.btn{height:36px;padding:0 20px;border-radius:8px;border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#c084fc);color:white}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(244,114,182,.4)}
+.btn-secondary{background:var(--panel-border);color:var(--text)}
+.btn-secondary:hover{background:#3d3d5c}
+.btn-icon{width:36px;height:36px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+/* 主布局 */
+.main-layout{display:flex;height:calc(100vh - 56px)}
+
+/* 左侧面板 */
+.left-panel{width:300px;background:var(--panel-bg);border-right:1px solid var(--panel-border);display:flex;flex-direction:column;overflow:hidden}
+.panel-tabs{display:flex;border-bottom:1px solid var(--panel-border)}
+.tab-btn{flex:1;height:44px;border:none;background:transparent;color:var(--text-light);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;position:relative}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--accent);background:rgba(244,114,182,.1)}
+.tab-btn.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--accent)}
+.panel-content{flex:1;overflow-y:auto;padding:16px}
+
+/* 图层列表 */
+.layer-list{display:flex;flex-direction:column;gap:4px}
+.layer-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(255,255,255,.03);border-radius:8px;cursor:pointer;transition:all .2s;border:2px solid transparent}
+.layer-item:hover{background:rgba(255,255,255,.06)}
+.layer-item.active{background:rgba(244,114,182,.15);border-color:var(--accent)}
+.layer-thumb{width:40px;height:40px;border-radius:6px;background:var(--panel-border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:14px}
+.layer-thumb img{width:100%;height:100%;object-fit:cover}
+.layer-info{flex:1;min-width:0}
+.layer-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.layer-type{font-size:11px;color:var(--text-light)}
+.layer-actions{display:flex;gap:4px;opacity:0;transition:opacity .2s}
+.layer-item:hover .layer-actions{opacity:1}
+.layer-action{width:24px;height:24px;border:none;background:transparent;color:var(--text-light);cursor:pointer;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:12px}
+.layer-action:hover{background:var(--panel-border);color:var(--text)}
+
+/* 属性面板 */
+.prop-group{margin-bottom:20px}
+.prop-label{font-size:11px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.prop-row{display:flex;gap:10px;margin-bottom:10px;align-items:center}
+.prop-input{flex:1;height:36px;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;padding:0 12px;color:var(--text);font-size:13px;outline:none;transition:all .2s}
+.prop-input:focus{border-color:var(--accent)}
+.prop-textarea{width:100%;min-height:60px;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;padding:8px 12px;color:var(--text);font-size:13px;outline:none;resize:vertical}
+.prop-textarea:focus{border-color:var(--accent)}
+.prop-select{flex:1;height:36px;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;padding:0 12px;color:var(--text);font-size:13px;outline:none;cursor:pointer}
+.prop-select:focus{border-color:var(--accent)}
+.prop-color{width:36px;height:36px;border:1px solid var(--panel-border);border-radius:6px;cursor:pointer;overflow:hidden;padding:2px;background:var(--bg)}
+.prop-color input{width:100%;height:100%;border:none;cursor:pointer;padding:0}
+.prop-range{flex:1;height:6px;-webkit-appearance:none;background:var(--panel-border);border-radius:3px;outline:none}
+.prop-range::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;background:var(--accent);border-radius:50%;cursor:pointer;transition:all .2s}
+.prop-range::-webkit-slider-thumb:hover{transform:scale(1.1)}
+.prop-number{width:60px;height:36px;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;padding:0 8px;color:var(--text);font-size:13px;text-align:center}
+.prop-checkbox{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px}
+.prop-checkbox input{width:18px;height:18px;accent-color:var(--accent)}
+
+/* 字体选择器 */
+.font-preview{height:60px;background:var(--bg);border:1px solid var(--panel-border);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--text);margin-bottom:10px;overflow:hidden}
+.font-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;max-height:300px;overflow-y:auto;padding-right:4px}
+.font-item{padding:10px 8px;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;cursor:pointer;text-align:center;font-size:14px;transition:all .2s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.font-item:hover{border-color:var(--accent);background:rgba(244,114,182,.1)}
+.font-item.active{border-color:var(--accent);background:var(--accent);color:white}
+
+/* 快捷颜色 */
+.color-palette{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.color-swatch{width:28px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:all .2s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.active{box-shadow:0 0 0 2px var(--accent)}
+
+/* 素材库 */
+.asset-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.asset-item{aspect-ratio:1;background:var(--bg);border:1px solid var(--panel-border);border-radius:8px;cursor:pointer;overflow:hidden;transition:all .2s;display:flex;align-items:center;justify-content:center;font-size:28px}
+.asset-item:hover{border-color:var(--accent);transform:scale(1.05)}
+.asset-item img{width:100%;height:100%;object-fit:cover}
+
+/* 渐变预设 */
+.gradient-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gradient-item{aspect-ratio:1;border-radius:8px;cursor:pointer;transition:all .2s;border:2px solid transparent}
+.gradient-item:hover{transform:scale(1.05)}
+.gradient-item.active{box-shadow:0 0 0 2px var(--accent)}
+
+/* 画布区域 */
+.canvas-area{flex:1;display:flex;align-items:center;justify-content:center;background:linear-gradient(45deg,#0a0a14 25%,transparent 25%),linear-gradient(-45deg,#0a0a14 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#0a0a14 75%),linear-gradient(-45deg,transparent 75%,#0a0a14 75%);background-size:20px 20px;background-position:0 0,0 10px,10px -10px,-10px 0px;background-color:var(--bg);position:relative;overflow:hidden}
+.canvas-container{position:relative;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+#editorCanvas{border-radius:50%;cursor:default}
+.canvas-overlay{position:absolute;inset:0;pointer-events:none;border-radius:50%;box-shadow:inset 0 0 0 3px rgba(255,255,255,.1)}
+.canvas-size{display:flex;align-items:center;gap:8px;position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:var(--panel-bg);padding:8px 16px;border-radius:20px;font-size:12px;color:var(--text-light)}
+
+/* 右侧工具栏 */
+.right-panel{width:56px;background:var(--panel-bg);border-left:1px solid var(--panel-border);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:8px}
+.tool-btn{width:44px;height:44px;border:none;background:transparent;color:var(--text-light);border-radius:10px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;transition:all .2s;font-size:11px}
+.tool-btn:hover{background:rgba(255,255,255,.05);color:var(--text)}
+.tool-btn.active{background:var(--accent);color:white}
+.tool-icon{font-size:20px}
+.tool-divider{width:32px;height:1px;background:var(--panel-border);margin:4px 0}
+
+/* 滚动条 */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--panel-border);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--text-light)}
+
+/* 提示 */
+.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%) translateY(100px);background:var(--panel-bg);color:var(--text);padding:12px 24px;border-radius:8px;font-size:14px;opacity:0;transition:all .3s;z-index:2000;border:1px solid var(--panel-border)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.success{border-color:var(--success)}
+.toast.error{border-color:var(--error)}
+
+/* 上传区域 */
+.upload-zone{border:2px dashed var(--panel-border);border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;margin-bottom:16px}
+.upload-zone:hover{border-color:var(--accent);background:rgba(244,114,182,.05)}
+.upload-icon{font-size:32px;margin-bottom:8px}
+.upload-text{font-size:13px;color:var(--text-light)}
+</style>
+</head>
+<body>
+<!-- 顶部栏 -->
+<div class="top-bar">
+  <div class="logo">
+    <div class="logo-icon">🎨</div>
+    <span>专业贴纸编辑器</span>
+  </div>
+  <div class="top-actions">
+    <button class="btn btn-secondary" onclick="editor.undo()">↩️ 撤销</button>
+    <button class="btn btn-secondary" onclick="editor.redo()">↪️ 重做</button>
+    <button class="btn btn-primary" onclick="editor.exportPNG()">💾 导出 PNG</button>
+  </div>
+</div>
+
+<!-- 主布局 -->
+<div class="main-layout">
+  <!-- 左侧面板 -->
+  <div class="left-panel">
+    <div class="panel-tabs">
+      <button class="tab-btn active" onclick="switchTab('layers')" id="tab-layers">图层</button>
+      <button class="tab-btn" onclick="switchTab('text')" id="tab-text">文字</button>
+      <button class="tab-btn" onclick="switchTab('assets')" id="tab-assets">素材</button>
+      <button class="tab-btn" onclick="switchTab('canvas')" id="tab-canvas">画布</button>
+    </div>
+    
+    <!-- 图层面板 -->
+    <div class="panel-content" id="panel-layers">
+      <div class="prop-group">
+        <div class="prop-label">
+          图层列表
+          <button class="btn btn-icon" style="width:28px;height:28px;font-size:12px" onclick="editor.addTextLayer()">+</button>
+        </div>
+        <div class="layer-list" id="layerList"></div>
+      </div>
+    </div>
+    
+    <!-- 文字面板 -->
+    <div class="panel-content" id="panel-text" style="display:none">
+      <div class="prop-group">
+        <div class="prop-label">文字内容</div>
+        <textarea class="prop-textarea" id="textContent" placeholder="输入文字..." oninput="editor.updateTextContent(this.value)"></textarea>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">字体预览</div>
+        <div class="font-preview" id="fontPreview">预览文字</div>
+        <input type="text" class="prop-input" placeholder="搜索字体..." style="margin-bottom:10px" oninput="filterFonts(this.value)">
+        <div class="font-grid" id="fontGrid"></div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">字号</div>
+        <div class="prop-row">
+          <input type="range" class="prop-range" id="fontSize" min="12" max="120" value="32" oninput="editor.updateFontSize(this.value)">
+          <input type="number" class="prop-number" id="fontSizeNum" value="32" onchange="editor.updateFontSize(this.value)">
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">颜色</div>
+        <div class="prop-row">
+          <div class="prop-color"><input type="color" id="textColor" value="#ffffff" oninput="editor.updateTextColor(this.value)"></div>
+          <div class="color-palette" id="textColorPalette"></div>
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">描边</div>
+        <div class="prop-row">
+          <div class="prop-color"><input type="color" id="strokeColor" value="#000000" oninput="editor.updateStrokeColor(this.value)"></div>
+          <input type="range" class="prop-range" id="strokeWidth" min="0" max="10" value="0" oninput="editor.updateStrokeWidth(this.value)">
+          <input type="number" class="prop-number" id="strokeWidthNum" value="0" onchange="editor.updateStrokeWidth(this.value)">
+        </div>
+        <div class="color-palette" id="strokeColorPalette"></div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">样式</div>
+        <div class="prop-row">
+          <label class="prop-checkbox"><input type="checkbox" id="textBold" onchange="editor.toggleBold(this.checked)"> 粗体</label>
+          <label class="prop-checkbox"><input type="checkbox" id="textItalic" onchange="editor.toggleItalic(this.checked)"> 斜体</label>
+          <label class="prop-checkbox"><input type="checkbox" id="textUnderline" onchange="editor.toggleUnderline(this.checked)"> 下划线</label>
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">对齐</div>
+        <div class="prop-row">
+          <button class="btn btn-secondary" onclick="editor.setTextAlign('left')" style="flex:1">左</button>
+          <button class="btn btn-secondary" onclick="editor.setTextAlign('center')" style="flex:1">中</button>
+          <button class="btn btn-secondary" onclick="editor.setTextAlign('right')" style="flex:1">右</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 素材面板 -->
+    <div class="panel-content" id="panel-assets" style="display:none">
+      <div class="prop-group">
+        <div class="prop-label">上传图片</div>
+        <div class="upload-zone" onclick="document.getElementById('imageUpload').click()">
+          <input type="file" id="imageUpload" accept="image/*" style="display:none" onchange="editor.uploadImage(this)">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text">点击上传图片</div>
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">装饰元素</div>
+        <div class="asset-grid">
+          <div class="asset-item" onclick="editor.addEmoji('✨')">✨</div>
+          <div class="asset-item" onclick="editor.addEmoji('💖')">💖</div>
+          <div class="asset-item" onclick="editor.addEmoji('🌟')">🌟</div>
+          <div class="asset-item" onclick="editor.addEmoji('🌺')">🌺</div>
+          <div class="asset-item" onclick="editor.addEmoji('🎀')">🎀</div>
+          <div class="asset-item" onclick="editor.addEmoji('👑')">👑</div>
+          <div class="asset-item" onclick="editor.addEmoji('🦋')">🦋</div>
+          <div class="asset-item" onclick="editor.addEmoji('🌈')">🌈</div>
+          <div class="asset-item" onclick="editor.addEmoji('⭐')">⭐</div>
+          <div class="asset-item" onclick="editor.addEmoji('🍓')">🍓</div>
+          <div class="asset-item" onclick="editor.addEmoji('🌸')">🌸</div>
+          <div class="asset-item" onclick="editor.addEmoji('💫')">💫</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 画布面板 -->
+    <div class="panel-content" id="panel-canvas" style="display:none">
+      <div class="prop-group">
+        <div class="prop-label">背景颜色</div>
+        <div class="prop-row">
+          <div class="prop-color"><input type="color" id="bgColor" value="#fce7f3" oninput="editor.setBgColor(this.value)"></div>
+          <div class="color-palette" id="bgColorPalette"></div>
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">渐变预设</div>
+        <div class="gradient-grid" id="gradientGrid"></div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">背景图片</div>
+        <div class="upload-zone" onclick="document.getElementById('bgUpload').click()">
+          <input type="file" id="bgUpload" accept="image/*" style="display:none" onchange="editor.uploadBgImage(this)">
+          <div class="upload-icon">🖼️</div>
+          <div class="upload-text">点击上传背景图</div>
+        </div>
+      </div>
+      
+      <div class="prop-group">
+        <div class="prop-label">画布形状</div>
+        <div class="prop-row">
+          <button class="btn btn-secondary" onclick="editor.setShape('circle')" style="flex:1">圆形</button>
+          <button class="btn btn-secondary" onclick="editor.setShape('square')" style="flex:1">方形</button>
+          <button class="btn btn-secondary" onclick="editor.setShape('rounded')" style="flex:1">圆角</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 画布区域 -->
+  <div class="canvas-area">
+    <div class="canvas-container" id="canvasContainer">
+      <canvas id="editorCanvas" width="500" height="500"></canvas>
+      <div class="canvas-overlay"></div>
+    </div>
+    <div class="canvas-size">
+      <span>500×500px</span>
+    </div>
+  </div>
+  
+  <!-- 右侧工具栏 -->
+  <div class="right-panel">
+    <button class="tool-btn active" id="tool-select" onclick="editor.setTool('select')">
+      <span class="tool-icon">↖</span>
+      <span>选择</span>
+    </button>
+    <button class="tool-btn" id="tool-text" onclick="editor.setTool('text')">
+      <span class="tool-icon">T</span>
+      <span>文字</span>
+    </button>
+    <button class="tool-btn" id="tool-image" onclick="document.getElementById('imageUpload').click()">
+      <span class="tool-icon">🖼</span>
+      <span>图片</span>
+    </button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" onclick="editor.bringToFront()">
+      <span class="tool-icon">⬆</span>
+      <span>置顶</span>
+    </button>
+    <button class="tool-btn" onclick="editor.sendToBack()">
+      <span class="tool-icon">⬇</span>
+      <span>置底</span>
+    </button>
+    <button class="tool-btn" onclick="editor.deleteSelection()">
+      <span class="tool-icon">🗑</span>
+      <span>删除</span>
+    </button>
+    <div class="tool-divider"></div>
+    <button class="tool-btn" onclick="editor.flipHorizontal()">
+      <span class="tool-icon">↔</span>
+      <span>水平翻转</span>
+    </button>
+    <button class="tool-btn" onclick="editor.flipVertical()">
+      <span class="tool-icon">↕</span>
+      <span>垂直翻转</span>
+    </button>
+    <button class="tool-btn" onclick="editor.rotate(90)">
+      <span class="tool-icon">↻</span>
+      <span>旋转90°</span>
+    </button>
+  </div>
+</div>
+
+<!-- 提示 -->
+<div class="toast" id="toast"></div>
+
+<script>
+// 字体库 - 100+ 种字体
+const FONT_LIBRARY = [
+  // 中文字体
+  {name:'Noto Sans SC',label:'思源黑体',category:'中文'},
+  {name:'Noto Serif SC',label:'思源宋体',category:'中文'},
+  {name:'Ma Shan Zheng',label:'马善政毛笔',category:'中文'},
+  {name:'ZCOOL XiaoWei',label:'站酷小薇',category:'中文'},
+  {name:'ZCOOL KuaiLe',label:'站酷快乐',category:'中文'},
+  {name:'Long Cang',label:'龙苍书法',category:'中文'},
+  {name:'ZCOOL QingKe HuangYou',label:'站酷庆科黄油',category:'中文'},
+  {name:'Zhi Mang Xing',label:'志莽行书',category:'中文'},
+  
+  // 英文装饰字
+  {name:'Bebas Neue',label:'Bebas Neue',category:'装饰'},
+  {name:'Oswald',label:'Oswald',category:'装饰'},
+  {name:'Playfair Display',label:'Playfair',category:'装饰'},
+  {name:'Raleway',label:'Raleway',category:'装饰'},
+  {name:'Pacifico',label:'Pacifico',category:'装饰'},
+  {name:'Dancing Script',label:'Dancing Script',category:'装饰'},
+  {name:'Righteous',label:'Righteous',category:'装饰'},
+  {name:'Lobster',label:'Lobster',category:'装饰'},
+  {name:'Permanent Marker',label:'Marker',category:'装饰'},
+  {name:'Caveat',label:'Caveat',category:'装饰'},
+  {name:'Satisfy',label:'Satisfy',category:'装饰'},
+  {name:'Great Vibes',label:'Great Vibes',category:'装饰'},
+  {name:'Sacramento',label:'Sacramento',category:'装饰'},
+  {name:'Shadows Into Light',label:'Shadows',category:'装饰'},
+  {name:'Indie Flower',label:'Indie Flower',category:'装饰'},
+  {name:'Amatic SC',label:'Amatic',category:'装饰'},
+  {name:'Ultra',label:'Ultra',category:'装饰'},
+  {name:'Fredoka One',label:'Fredoka',category:'装饰'},
+  
+  // 英文正文
+  {name:'Roboto',label:'Roboto',category:'正文'},
+  {name:'Open Sans',label:'Open Sans',category:'正文'},
+  {name:'Lato',label:'Lato',category:'正文'},
+  {name:'Montserrat',label:'Montserrat',category:'正文'},
+  {name:'Poppins',label:'Poppins',category:'正文'},
+  {name:'Nunito',label:'Nunito',category:'正文'},
+  {name:'Quicksand',label:'Quicksand',category:'正文'},
+  {name:'Josefin Sans',label:'Josefin',category:'正文'},
+  {name:'Varela Round',label:'Varela',category:'正文'},
+  {name:'Comfortaa',label:'Comfortaa',category:'正文'},
+  
+  // 系统字体
+  {name:'Arial',label:'Arial',category:'系统'},
+  {name:'Georgia',label:'Georgia',category:'系统'},
+  {name:'Times New Roman',label:'Times',category:'系统'},
+  {name:'Courier New',label:'Courier',category:'系统'},
+  {name:'Impact',label:'Impact',category:'系统'},
+  {name:'Comic Sans MS',label:'Comic Sans',category:'系统'},
+  {name:'Trebuchet MS',label:'Trebuchet',category:'系统'},
+  {name:'Verdana',label:'Verdana',category:'系统'},
+  {name:'Helvetica',label:'Helvetica',category:'系统'},
+  {name:'Palatino',label:'Palatino',category:'系统'},
+];
+
+// 颜色预设
+const COLOR_PRESETS = ['#ffffff', '#000000', '#f472b6', '#ef4444', '#f97316', '#facc15', '#22c55e', '#3b82f6', '#a855f7', '#d4a853'];
+
+// 渐变预设
+const GRADIENT_PRESETS = [
+  {name:'粉紫渐变',style:'linear-gradient(135deg,#ff6b6b,#c084fc)'},
+  {name:'蓝粉渐变',style:'linear-gradient(135deg,#48dbfb,#ff9ff3)'},
+  {name:'绿蓝渐变',style:'linear-gradient(135deg,#1dd1a1,#54a0ff)'},
+  {name:'金橙渐变',style:'linear-gradient(135deg,#feca57,#ff9f43)'},
+  {name:'紫粉渐变',style:'linear-gradient(135deg,#a855f7,#f472b6)'},
+  {name:'蓝紫渐变',style:'linear-gradient(135deg,#3b82f6,#8b5cf6)'},
+];
+
+// 编辑器类
+class StickerEditor {
+  constructor() {
+    this.canvas = new fabric.Canvas('editorCanvas', {
+      width: 500,
+      height: 500,
+      backgroundColor: '#fce7f3',
+      preserveObjectStacking: true
+    });
+    this.history = [];
+    this.historyIndex = -1;
+    this.currentTool = 'select';
+    this.clipCircle = null;
+    this.bgImage = null;
+    
+    this.init();
+  }
+  
+  init() {
+    this.setupClipPath();
+    this.setupEvents();
+    this.renderFontGrid();
+    this.renderColorPalettes();
+    this.renderGradientGrid();
+    this.loadFromSession();
+    this.saveState();
+    this.updateLayerList();
+  }
+  
+  setupClipPath() {
+    // 创建圆形裁剪路径
+    this.clipCircle = new fabric.Circle({
+      radius: 250,
+      left: 250,
+      top: 250,
+      originX: 'center',
+      originY: 'center',
+      selectable: false,
+      evented: false
+    });
+    this.canvas.clipPath = this.clipCircle;
+  }
+  
+  setupEvents() {
+    // 选择事件
+    this.canvas.on('selection:created', () => this.onSelectionChange());
+    this.canvas.on('selection:updated', () => this.onSelectionChange());
+    this.canvas.on('selection:cleared', () => this.onSelectionCleared());
+    
+    // 修改事件 - 保存历史
+    this.canvas.on('object:modified', () => this.saveState());
+    this.canvas.on('object:added', () => {
+      this.saveState();
+      this.updateLayerList();
+    });
+    this.canvas.on('object:removed', () => {
+      this.saveState();
+      this.updateLayerList();
+    });
+    
+    // 双击进入文字编辑
+    this.canvas.on('mouse:dblclick', (e) => {
+      if (e.target && e.target.type === 'i-text') {
+        e.target.enterEditing();
+        e.target.selectAll();
+      }
+    });
+    
+    // 键盘快捷键
+    document.addEventListener('keydown', (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === 'z') {
+          e.preventDefault();
+          this.undo();
+        } else if (e.key === 'y' || (e.shiftKey && e.key === 'Z')) {
+          e.preventDefault();
+          this.redo();
+        }
+      }
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (!this.canvas.getActiveObject()?.isEditing) {
+          this.deleteSelection();
+        }
+      }
+    });
+  }
+  
+  loadFromSession() {
+    const saved = sessionStorage.getItem('proEditorData');
+    if (!saved) {
+      this.addDefaultText();
+      return;
+    }
+    
+    try {
+      const data = JSON.parse(saved);
+      
+      // 加载背景图
+      if (data.imageDataUrl) {
+        fabric.Image.fromURL(data.imageDataUrl, (img) => {
+          img.set({
+            left: 250,
+            top: 250,
+            originX: 'center',
+            originY: 'center',
+            scaleX: 500 / img.width,
+            scaleY: 500 / img.height,
+            selectable: false,
+            evented: false
+          });
+          this.bgImage = img;
+          this.canvas.add(img);
+          this.canvas.sendToBack(img);
+          this.canvas.renderAll();
+        });
+      }
+      
+      // 加载插入的图片
+      if (data.insertedImageB64) {
+        fabric.Image.fromURL(data.insertedImageB64, (img) => {
+          img.set({
+            left: 250,
+            top: 200,
+            originX: 'center',
+            originY: 'center',
+            scaleX: 150 / img.width,
+            scaleY: 150 / img.height
+          });
+          this.canvas.add(img);
+        });
+      }
+      
+      // 添加文案文字
+      if (data.copywriting) {
+        this.addTextLayer(data.copywriting, 250, 320);
+      } else {
+        this.addDefaultText();
+      }
+      
+      sessionStorage.removeItem('proEditorData');
+      this.showToast('已加载贴纸数据');
+    } catch (e) {
+      console.error('加载失败', e);
+      this.addDefaultText();
+    }
+  }
+  
+  addDefaultText() {
+    this.addTextLayer('双击编辑文字', 250, 280);
+  }
+  
+  addTextLayer(text = '新文字', x = 250, y = 250) {
+    const textObj = new fabric.IText(text, {
+      left: x,
+      top: y,
+      fontFamily: 'Noto Sans SC',
+      fontSize: 32,
+      fill: '#ffffff',
+      stroke: '#000000',
+      strokeWidth: 0,
+      textAlign: 'center',
+      originX: 'center',
+      originY: 'center',
+      selectable: true
+    });
+    this.canvas.add(textObj);
+    this.canvas.setActiveObject(textObj);
+    this.canvas.renderAll();
+    this.showToast('已添加文字');
+  }
+  
+  addEmoji(emoji) {
+    const textObj = new fabric.IText(emoji, {
+      left: 250,
+      top: 250,
+      fontFamily: 'Segoe UI Emoji',
+      fontSize: 60,
+      fill: '#ffffff',
+      originX: 'center',
+      originY: 'center'
+    });
+    this.canvas.add(textObj);
+    this.canvas.setActiveObject(textObj);
+    this.canvas.renderAll();
+  }
+  
+  uploadImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      fabric.Image.fromURL(e.target.result, (img) => {
+        const scale = Math.min(200 / img.width, 200 / img.height);
+        img.set({
+          left: 250,
+          top: 250,
+          originX: 'center',
+          originY: 'center',
+          scaleX: scale,
+          scaleY: scale
+        });
+        this.canvas.add(img);
+        this.canvas.setActiveObject(img);
+        this.canvas.renderAll();
+        this.showToast('图片已添加');
+      });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+  
+  // 属性更新
+  updateTextContent(text) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('text', text);
+      this.canvas.renderAll();
+      document.getElementById('fontPreview').textContent = text || '预览文字';
+    }
+  }
+  
+  updateFontSize(size) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('fontSize', parseInt(size));
+      this.canvas.renderAll();
+    }
+    document.getElementById('fontSize').value = size;
+    document.getElementById('fontSizeNum').value = size;
+  }
+  
+  updateTextColor(color) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('fill', color);
+      this.canvas.renderAll();
+    }
+    document.getElementById('textColor').value = color;
+  }
+  
+  updateStrokeColor(color) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('stroke', color);
+      this.canvas.renderAll();
+    }
+    document.getElementById('strokeColor').value = color;
+  }
+  
+  updateStrokeWidth(width) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('strokeWidth', parseInt(width));
+      this.canvas.renderAll();
+    }
+    document.getElementById('strokeWidth').value = width;
+    document.getElementById('strokeWidthNum').value = width;
+  }
+  
+  toggleBold(checked) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('fontWeight', checked ? 'bold' : 'normal');
+      this.canvas.renderAll();
+    }
+  }
+  
+  toggleItalic(checked) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('fontStyle', checked ? 'italic' : 'normal');
+      this.canvas.renderAll();
+    }
+  }
+  
+  toggleUnderline(checked) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('underline', checked);
+      this.canvas.renderAll();
+    }
+  }
+  
+  setTextAlign(align) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('textAlign', align);
+      this.canvas.renderAll();
+    }
+  }
+  
+  updateFontFamily(font) {
+    const obj = this.canvas.getActiveObject();
+    if (obj && obj.type === 'i-text') {
+      obj.set('fontFamily', font);
+      this.canvas.renderAll();
+      document.getElementById('fontPreview').style.fontFamily = font;
+    }
+    // 更新选中状态
+    document.querySelectorAll('.font-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.font === font);
+    });
+  }
+  
+  // 选择事件处理
+  onSelectionChange() {
+    const obj = this.canvas.getActiveObject();
+    if (!obj) return;
+    
+    this.updateLayerList();
+    
+    if (obj.type === 'i-text') {
+      switchTab('text');
+      this.updateTextPanel(obj);
+    }
+  }
+  
+  onSelectionCleared() {
+    this.updateLayerList();
+  }
+  
+  updateTextPanel(obj) {
+    document.getElementById('textContent').value = obj.text || '';
+    document.getElementById('fontSize').value = obj.fontSize || 32;
+    document.getElementById('fontSizeNum').value = obj.fontSize || 32;
+    document.getElementById('textColor').value = obj.fill || '#ffffff';
+    document.getElementById('strokeColor').value = obj.stroke || '#000000';
+    document.getElementById('strokeWidth').value = obj.strokeWidth || 0;
+    document.getElementById('strokeWidthNum').value = obj.strokeWidth || 0;
+    document.getElementById('textBold').checked = obj.fontWeight === 'bold';
+    document.getElementById('textItalic').checked = obj.fontStyle === 'italic';
+    document.getElementById('textUnderline').checked = obj.underline || false;
+    document.getElementById('fontPreview').textContent = obj.text || '预览文字';
+    document.getElementById('fontPreview').style.fontFamily = obj.fontFamily || 'Noto Sans SC';
+    
+    // 更新字体选中
+    document.querySelectorAll('.font-item').forEach(item => {
+      item.classList.toggle('active', item.dataset.font === obj.fontFamily);
+    });
+  }
+  
+  // 图层操作
+  bringToFront() {
+    const obj = this.canvas.getActiveObject();
+    if (obj) {
+      this.canvas.bringToFront(obj);
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+    }
+  }
+  
+  sendToBack() {
+    const obj = this.canvas.getActiveObject();
+    if (obj) {
+      this.canvas.sendToBack(obj);
+      if (this.bgImage) this.canvas.sendToBack(this.bgImage);
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+    }
+  }
+  
+  deleteSelection() {
+    const active = this.canvas.getActiveObjects();
+    if (active.length) {
+      active.forEach(obj => this.canvas.remove(obj));
+      this.canvas.discardActiveObject();
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+      this.showToast('已删除');
+    }
+  }
+  
+  flipHorizontal() {
+    const obj = this.canvas.getActiveObject();
+    if (obj) {
+      obj.set('flipX', !obj.flipX);
+      this.canvas.renderAll();
+      this.saveState();
+    }
+  }
+  
+  flipVertical() {
+    const obj = this.canvas.getActiveObject();
+    if (obj) {
+      obj.set('flipY', !obj.flipY);
+      this.canvas.renderAll();
+      this.saveState();
+    }
+  }
+  
+  rotate(deg) {
+    const obj = this.canvas.getActiveObject();
+    if (obj) {
+      obj.set('angle', (obj.angle || 0) + deg);
+      this.canvas.renderAll();
+      this.saveState();
+    }
+  }
+  
+  // 工具切换
+  setTool(tool) {
+    this.currentTool = tool;
+    document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`tool-${tool}`).classList.add('active');
+    
+    if (tool === 'text') {
+      this.addTextLayer();
+      this.setTool('select');
+    }
+  }
+  
+  // 画布设置
+  setBgColor(color) {
+    this.canvas.setBackgroundColor(color, () => {
+      this.canvas.renderAll();
+      this.saveState();
+    });
+  }
+  
+  uploadBgImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      fabric.Image.fromURL(e.target.result, (img) => {
+        if (this.bgImage) this.canvas.remove(this.bgImage);
+        img.set({
+          left: 250,
+          top: 250,
+          originX: 'center',
+          originY: 'center',
+          scaleX: 500 / img.width,
+          scaleY: 500 / img.height,
+          selectable: false,
+          evented: false
+        });
+        this.bgImage = img;
+        this.canvas.add(img);
+        this.canvas.sendToBack(img);
+        this.canvas.renderAll();
+        this.saveState();
+        this.showToast('背景图已设置');
+      });
+    };
+    reader.readAsDataURL(file);
+    input.value = '';
+  }
+  
+  setShape(shape) {
+    if (shape === 'circle') {
+      this.clipCircle.set({ radius: 250, rx: 0, ry: 0 });
+      this.canvas.clipPath = this.clipCircle;
+    } else if (shape === 'square') {
+      this.canvas.clipPath = null;
+    } else if (shape === 'rounded') {
+      this.clipCircle.set({ rx: 50, ry: 50 });
+      this.canvas.clipPath = this.clipCircle;
+    }
+    this.canvas.renderAll();
+    this.saveState();
+    this.showToast(`已切换为${shape === 'circle' ? '圆形' : shape === 'square' ? '方形' : '圆角'}形状`);
+  }
+  
+  // 历史记录
+  saveState() {
+    const json = this.canvas.toJSON();
+    if (this.historyIndex < this.history.length - 1) {
+      this.history = this.history.slice(0, this.historyIndex + 1);
+    }
+    this.history.push(json);
+    this.historyIndex++;
+    if (this.history.length > 50) {
+      this.history.shift();
+      this.historyIndex--;
+    }
+  }
+  
+  undo() {
+    if (this.historyIndex > 0) {
+      this.historyIndex--;
+      this.canvas.loadFromJSON(this.history[this.historyIndex], () => {
+        this.canvas.renderAll();
+        this.updateLayerList();
+      });
+      this.showToast('已撤销');
+    }
+  }
+  
+  redo() {
+    if (this.historyIndex < this.history.length - 1) {
+      this.historyIndex++;
+      this.canvas.loadFromJSON(this.history[this.historyIndex], () => {
+        this.canvas.renderAll();
+        this.updateLayerList();
+      });
+      this.showToast('已重做');
+    }
+  }
+  
+  // 图层列表
+  updateLayerList() {
+    const list = document.getElementById('layerList');
+    const objects = this.canvas.getObjects().filter(obj => obj !== this.bgImage && obj !== this.clipCircle);
+    
+    list.innerHTML = objects.slice().reverse().map((obj, i) => {
+      const index = objects.length - 1 - i;
+      const isActive = this.canvas.getActiveObject() === obj;
+      let thumb = '?';
+      let name = '图层';
+      
+      if (obj.type === 'i-text') {
+        thumb = 'T';
+        name = obj.text?.slice(0, 10) || '文字';
+      } else if (obj.type === 'image') {
+        thumb = '🖼';
+        name = '图片';
+      } else if (obj.type === 'rect' || obj.type === 'circle') {
+        thumb = '⬜';
+        name = '形状';
+      }
+      
+      return `
+        <div class="layer-item ${isActive ? 'active' : ''}" onclick="editor.selectObject(${index})">
+          <div class="layer-thumb">${thumb}</div>
+          <div class="layer-info">
+            <div class="layer-name">${name}</div>
+            <div class="layer-type">${obj.type === 'i-text' ? '文字' : obj.type === 'image' ? '图片' : '形状'}</div>
+          </div>
+          <div class="layer-actions">
+            <button class="layer-action" onclick="event.stopPropagation();editor.moveLayerUp(${index})">↑</button>
+            <button class="layer-action" onclick="event.stopPropagation();editor.moveLayerDown(${index})">↓</button>
+            <button class="layer-action" onclick="event.stopPropagation();editor.deleteLayer(${index})">×</button>
+          </div>
+        </div>
+      `;
+    }).join('') || '<div style="color:var(--text-light);text-align:center;padding:20px">暂无图层</div>';
+  }
+  
+  selectObject(index) {
+    const objects = this.canvas.getObjects().filter(obj => obj !== this.bgImage && obj !== this.clipCircle);
+    if (objects[index]) {
+      this.canvas.setActiveObject(objects[index]);
+      this.canvas.renderAll();
+      this.updateLayerList();
+    }
+  }
+  
+  moveLayerUp(index) {
+    const objects = this.canvas.getObjects().filter(obj => obj !== this.bgImage && obj !== this.clipCircle);
+    const obj = objects[index];
+    if (obj) {
+      this.canvas.bringForward(obj);
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+    }
+  }
+  
+  moveLayerDown(index) {
+    const objects = this.canvas.getObjects().filter(obj => obj !== this.bgImage && obj !== this.clipCircle);
+    const obj = objects[index];
+    if (obj) {
+      this.canvas.sendBackwards(obj);
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+    }
+  }
+  
+  deleteLayer(index) {
+    const objects = this.canvas.getObjects().filter(obj => obj !== this.bgImage && obj !== this.clipCircle);
+    const obj = objects[index];
+    if (obj) {
+      this.canvas.remove(obj);
+      this.canvas.renderAll();
+      this.updateLayerList();
+      this.saveState();
+    }
+  }
+  
+  // 导出
+  exportPNG() {
+    // 临时移除裁剪，导出完整画布
+    const originalClip = this.canvas.clipPath;
+    this.canvas.clipPath = null;
+    
+    const dataURL = this.canvas.toDataURL({
+      format: 'png',
+      quality: 1,
+      multiplier: 1
+    });
+    
+    this.canvas.clipPath = originalClip;
+    this.canvas.renderAll();
+    
+    const link = document.createElement('a');
+    link.download = `sticker_${Date.now()}.png`;
+    link.href = dataURL;
+    link.click();
+    this.showToast('导出成功！');
+  }
+  
+  // 提示
+  showToast(msg, type = 'success') {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.className = `toast show ${type}`;
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+  
+  // 渲染UI
+  renderFontGrid() {
+    const grid = document.getElementById('fontGrid');
+    grid.innerHTML = FONT_LIBRARY.map(font => `
+      <div class="font-item" data-font="${font.name}" style="font-family:'${font.name}',sans-serif" onclick="editor.updateFontFamily('${font.name}')">
+        Aa ${font.label}
+      </div>
+    `).join('');
+  }
+  
+  renderColorPalettes() {
+    const createPalette = (id, onClick) => {
+      const container = document.getElementById(id);
+      container.innerHTML = COLOR_PRESETS.map(color => `
+        <div class="color-swatch" style="background:${color}" onclick="${onClick}('${color}')"></div>
+      `).join('');
+    };
+    createPalette('textColorPalette', "document.getElementById('textColor').value='%s';editor.updateTextColor");
+    createPalette('strokeColorPalette', "document.getElementById('strokeColor').value='%s';editor.updateStrokeColor");
+    createPalette('bgColorPalette', "document.getElementById('bgColor').value='%s';editor.setBgColor");
+  }
+  
+  renderGradientGrid() {
+    const grid = document.getElementById('gradientGrid');
+    grid.innerHTML = GRADIENT_PRESETS.map((g, i) => `
+      <div class="gradient-item" style="background:${g.style}" onclick="editor.setGradient(${i})" title="${g.name}"></div>
+    `).join('');
+  }
+  
+  setGradient(index) {
+    const g = GRADIENT_PRESETS[index];
+    // 创建渐变背景
+    const canvas = document.createElement('canvas');
+    canvas.width = 500;
+    canvas.height = 500;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createLinearGradient(0, 0, 500, 500);
+    
+    // 解析渐变颜色
+    const colors = g.style.match(/#[a-fA-F0-9]{6}/g);
+    if (colors) {
+      gradient.addColorStop(0, colors[0]);
+      gradient.addColorStop(1, colors[1] || colors[0]);
+    }
+    
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 500, 500);
+    
+    fabric.Image.fromURL(canvas.toDataURL(), (img) => {
+      if (this.bgImage) this.canvas.remove(this.bgImage);
+      img.set({
+        left: 250,
+        top: 250,
+        originX: 'center',
+        originY: 'center',
+        scaleX: 1,
+        scaleY: 1,
+        selectable: false,
+        evented: false
+      });
+      this.bgImage = img;
+      this.canvas.add(img);
+      this.canvas.sendToBack(img);
+      this.canvas.renderAll();
+      this.saveState();
+    });
+  }
+}
+
+// 全局函数
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  document.getElementById(`tab-${tab}`).classList.add('active');
+  document.querySelectorAll('.panel-content').forEach(content => content.style.display = 'none');
+  document.getElementById(`panel-${tab}`).style.display = 'block';
+}
+
+function filterFonts(query) {
+  const items = document.querySelectorAll('.font-item');
+  items.forEach(item => {
+    const font = FONT_LIBRARY.find(f => f.name === item.dataset.font);
+    const match = font.label.toLowerCase().includes(query.toLowerCase()) || 
+                  font.name.toLowerCase().includes(query.toLowerCase());
+    item.style.display = match ? 'block' : 'none';
+  });
+}
+
+// 初始化
+const editor = new StickerEditor();
+</script>
+</body>
+</html>
