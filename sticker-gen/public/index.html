@@ -616,10 +616,24 @@ function renderCards(){
   const wrap=document.getElementById('cardsArea');
   if(!cardStates.length){wrap.innerHTML='<div class="empty-hint">没有有效数据</div>';return;}
 
-  // Group by theme
+  // Determine grouping key:
+  // If no embedded images at all AND no theme column — group by copywriting (text)
+  const hasAnyEmbedded = cardStates.some(c => c.referenceImageB64);
+  const hasAnyTheme = cardStates.some(c => c.theme && c.theme.trim());
+  const groupByText = !hasAnyEmbedded && !hasAnyTheme;
+
+  // Group by theme (or copywriting when no theme/reference available)
   const groups = {};
   cardStates.forEach((c,i)=>{
-    const key = c.theme || '未分组';
+    let key;
+    if (groupByText) {
+      // No reference images and no theme column: group by copywriting text
+      key = (c.copywriting && c.copywriting.trim()) ? c.copywriting.trim() : '未分组';
+    } else {
+      key = c._groupKey || c.theme || '未分组';
+    }
+    // Store resolved group key on the card so renderThemeStrip can find it
+    c._groupKey = key;
     if(!groups[key]) groups[key]=[];
     groups[key].push(i);
   });
@@ -662,7 +676,7 @@ function renderCards(){
   }
   // Render preview placeholders for all themes immediately after DOM is built
   requestAnimationFrame(() => {
-    const themes = [...new Set(cardStates.map(c => c.theme || '未分组'))];
+    const themes = [...new Set(cardStates.map(c => c._groupKey || c.theme || '未分组'))];
     themes.forEach(t => renderThemeStrip(t));
   });
 }
@@ -801,7 +815,7 @@ async function confirmInsertImage(){
 
 function renderGallery(i) {
   const c = cardStates[i];
-  const theme = c.theme || '未分组';
+  const theme = c._groupKey || c.theme || '未分组';
   renderThemeStrip(theme);
 }
 
@@ -811,7 +825,7 @@ function renderThemeStrip(theme) {
   if (!strip) return;
   const items = [];
   cardStates.forEach((c, i) => {
-    if ((c.theme || '未分组') !== theme) return;
+    if ((c._groupKey || c.theme || '未分组') !== theme) return;
     const emoji = getEmoji(theme);
     const copy = c.copywriting || '第'+(i+1)+'张';
 
@@ -860,7 +874,7 @@ function selectStripImg(i, idx) {
   const c = cardStates[i];
   if (!c.generatedImages || !c.generatedImages[idx]) return;
   c.imageDataUrl = c.generatedImages[idx].url;
-  renderThemeStrip(c.theme || '未分组');
+  renderThemeStrip(c._groupKey || c.theme || '未分组');
 }
 
 function selectGalleryImg(i, idx) { selectStripImg(i, idx); }
@@ -881,14 +895,14 @@ function openEditModalForImg(i) { openEditModal(i); }
 function openBatchAiEdit(safeTheme) {
   // Find first card in this theme that has a generated image
   const theme = safeTheme.replace(/_/g,' ');
-  const card = cardStates.find(c => (c.theme||'未分组').replace(/[\s/]/g,'_') === safeTheme && c.imageDataUrl);
+  const card = cardStates.find(c => (c._groupKey||c.theme||'未分组').replace(/[\s/]/g,'_') === safeTheme && c.imageDataUrl);
   if (!card) { showToast('请先生成图片', 'error'); return; }
   const i = cardStates.indexOf(card);
   openGlobalAiEdit(i);
 }
 
 function openBatchPrompt(safeTheme) {
-  const card = cardStates.find(c => (c.theme||'未分组').replace(/[\s/]/g,'_') === safeTheme);
+  const card = cardStates.find(c => (c._groupKey||c.theme||'未分组').replace(/[\s/]/g,'_') === safeTheme);
   if (!card) return;
   openEditModal(cardStates.indexOf(card));
 }
@@ -1295,7 +1309,7 @@ function removeWhiteBackground(dataUrl, threshold = 230) {
 function downloadTheme(safeTheme) {
   let count = 0;
   cardStates.forEach((c, i) => {
-    if ((c.theme||'未分组').replace(/[\s/]/g,'_') !== safeTheme) return;
+    if ((c._groupKey||c.theme||'未分组').replace(/[\s/]/g,'_') !== safeTheme) return;
     if (!c.imageDataUrl) return;
     setTimeout(() => {
       const a = document.createElement('a');
@@ -1373,7 +1387,7 @@ if (typeof mode === 'number') {
         // Bug3: 如果该行没有参考图，尝试共享同一主题组里其他行的参考图
         let sharedRefImg = c.referenceImageB64;
         if (!sharedRefImg) {
-          const sameTheme = cardStates.find(other => other !== c && !!(other.referenceImageB64) && (other.theme || '未分组') === (c.theme || '未分组'));
+          const sameTheme = cardStates.find(other => other !== c && !!(other.referenceImageB64) && (other.theme || '未分组') === (c._groupKey || c.theme || '未分组'));
           if (sameTheme) sharedRefImg = sameTheme.referenceImageB64;
         }
 
