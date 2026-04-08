@@ -565,14 +565,16 @@ async function handleFile(file){
 function renderTable(data){
   if(!data.length)return;
   const allKeys=Object.keys(data[0]);
-  const keys=allKeys.filter(k=>k!=='__embeddedImage__');
-  // Add a virtual "参考图状态" column
+  const keys=allKeys.filter(k=>k!=='__embeddedImage__'&&k!=='__patternImage__');
+  // Add virtual columns for embedded images
   const hasImgCol = data.some(r=>r['__embeddedImage__']);
-  const headCols = [...keys, ...(hasImgCol?['参考图']:[])];
+  const hasPatCol = data.some(r=>r['__patternImage__']);
+  const headCols = [...keys, ...(hasImgCol?['参考图']:[]), ...(hasPatCol?['图案图']:[])];
   document.getElementById('tableHead').innerHTML=headCols.map(k=>`<th>${k}</th>`).join('');
   document.getElementById('tableBody').innerHTML=data.map(r=>`<tr>
     ${keys.map(k=>`<td>${r[k]||''}</td>`).join('')}
-    ${hasImgCol?`<td style="text-align:center">${r['__embeddedImage__']?'<span style="color:#059669;font-weight:600">✅ 已识别</span>':'<span style="color:#9ca3af">-</span>'}</td>`:''}
+    ${hasImgCol?`<td style="text-align:center">${r['__embeddedImage__']?'<span style="color:#059669;font-weight:600">✅ 参考图</span>':'<span style="color:#9ca3af">-</span>'}</td>`:''}
+    ${hasPatCol?`<td style="text-align:center">${r['__patternImage__']?'<span style="color:#7c3aed;font-weight:600">✅ 图案图</span>':'<span style="color:#9ca3af">-</span>'}</td>`:''}
   </tr>`).join('');
   document.getElementById('tableArea').style.display='block';
   document.getElementById('rowCount').textContent=data.length+' 行';
@@ -583,9 +585,9 @@ async function buildCardStates(data){
     index:i,
     copywriting:normalizeKey(row,['文案','copy','text','message','文字','内容','slogan']),
     theme:normalizeKey(row,['主题','theme','图案','风格','类型','style_theme']),
-    referenceImgUrl:normalizeKey(row,['参考图','参考图片','参考','图片','图','ref','image','img','url','reference','pic','photo','样图','设计图','素材']),
+    referenceImgUrl:normalizeKey(row,['参考图','参考图片','参考','ref','reference','样图','设计图']),
     referenceImageB64: row['__embeddedImage__'] || null,  // embedded image from xlsx takes priority
-    insertedImageB64:null,
+    insertedImageB64: row['__patternImage__'] || null,    // second image in row = pattern/design
     insertedImageUrl:null,
     style:'watercolor_floral',
     status:'pending',

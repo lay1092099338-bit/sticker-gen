@@ -54,20 +54,36 @@ function extractEmbeddedImages(buffer) {
         }
       }
 
-      // Parse drawing: each twoCellAnchor → from.row + rId
+      // Parse drawing: each anchor (oneCellAnchor or twoCellAnchor) → from.row + rId
       const drawDoc = new DOMParser().parseFromString(drawingXml, 'text/xml');
-      const anchors = drawDoc.getElementsByTagName('xdr:twoCellAnchor');
+      // Support both twoCellAnchor and oneCellAnchor, with or without namespace prefix
+      function getElsByLocalName(doc, localName) {
+        const results = [];
+        const all = doc.getElementsByTagName('*');
+        for (let k = 0; k < all.length; k++) {
+          const tag = all[k].tagName || '';
+          if (tag === localName || tag.endsWith(':' + localName)) results.push(all[k]);
+        }
+        return results;
+      }
+      const anchors = [
+        ...getElsByLocalName(drawDoc, 'twoCellAnchor'),
+        ...getElsByLocalName(drawDoc, 'oneCellAnchor'),
+      ];
+      console.log(`[extractImages] drawing=${drawingPath} anchors=${anchors.length} ridMap=${JSON.stringify(ridToPath)}`);
       for (let i = 0; i < anchors.length; i++) {
         const anchor = anchors[i];
-        const fromEls = anchor.getElementsByTagName('xdr:from');
-        if (!fromEls.length) continue;
-        const rowEl = fromEls[0].getElementsByTagName('xdr:row');
-        if (!rowEl.length) continue;
+        const fromEls = getElsByLocalName(anchor, 'from');
+        if (!fromEls.length) { console.log('[extractImages] anchor has no from'); continue; }
+        const rowEl = getElsByLocalName(fromEls[0], 'row');
+        if (!rowEl.length) { console.log('[extractImages] from has no row'); continue; }
         const rowNum = parseInt(rowEl[0].textContent, 10); // 0-based row in sheet (0 = header row)
 
-        const blipEls = anchor.getElementsByTagName('a:blip');
-        if (!blipEls.length) continue;
-        const rId = blipEls[0].getAttribute('r:embed');
+        const blipEls = getElsByLocalName(anchor, 'blip');
+        if (!blipEls.length) { console.log('[extractImages] anchor has no blip'); continue; }
+        // try both r:embed and embed attributes
+        const rId = blipEls[0].getAttribute('r:embed') || blipEls[0].getAttribute('embed') || blipEls[0].getAttribute('r:link');
+        console.log(`[extractImages] rowNum=${rowNum} rId=${rId} resolved=${ridToPath[rId]}`);
         if (!rId || !ridToPath[rId]) continue;
 
         const imgPath = ridToPath[rId];
@@ -84,7 +100,10 @@ function extractEmbeddedImages(buffer) {
         const dataRowIndex = rowNum - 1; // convert to 0-based data row
         if (dataRowIndex >= 0) {
           if (!rowImageMap[dataRowIndex]) {
-            rowImageMap[dataRowIndex] = dataUrl;
+            rowImageMap[dataRowIndex] = { ref: dataUrl };
+          } else if (!rowImageMap[dataRowIndex].pattern) {
+            // Second image in same row = pattern/design image
+            rowImageMap[dataRowIndex].pattern = dataUrl;
           }
         }
       }
@@ -92,6 +111,30 @@ function extractEmbeddedImages(buffer) {
   } catch (e) {
     console.error('extractEmbeddedImages error:', e.message);
   }
+
+  // ── Fallback: if XML parsing yielded nothing, map media files by sort order ──
+  if (Object.keys(rowImageMap).length === 0) {
+    console.log('[extractImages] XML parse yielded 0 images — trying media fallback');
+    try {
+      const zip2 = new AdmZip(buffer);
+      const mediaEntries = zip2.getEntries()
+        .filter(e => e.entryName.match(/xl\/media\//i) && e.entryName.match(/\.(png|jpe?g|gif|webp)$/i))
+        .sort((a, b) => a.entryName.localeCompare(b.entryName));
+      console.log('[extractImages] media files found:', mediaEntries.map(e => e.entryName));
+      mediaEntries.forEach((entry, idx) => {
+        const imgBuf = entry.getData();
+        const ext = entry.entryName.split('.').pop().toLowerCase();
+        const mime = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : ext === 'png' ? 'image/png' : ext === 'gif' ? 'image/gif' : 'image/webp';
+        const dataUrl = `data:${mime};base64,${imgBuf.toString('base64')}`;
+        rowImageMap[idx] = { ref: dataUrl };
+        console.log(`[extractImages] fallback: media[${idx}] => ${entry.entryName} (${imgBuf.length} bytes)`);
+      });
+    } catch (e2) {
+      console.error('extractEmbeddedImages fallback error:', e2.message);
+    }
+  }
+
+  console.log('[extractImages] final rowImageMap keys:', Object.keys(rowImageMap));
   return rowImageMap;
 }
 
@@ -106,8 +149,11 @@ app.post('/api/parse-excel', upload.single('file'), (req, res) => {
     // Extract embedded images and attach to rows
     const rowImageMap = extractEmbeddedImages(buf);
     data.forEach((row, i) => {
-      if (rowImageMap[i]) {
-        row['__embeddedImage__'] = rowImageMap[i];
+      const entry = rowImageMap[i];
+      if (entry) {
+        // entry is { ref: dataUrl, pattern?: dataUrl }
+        row['__embeddedImage__'] = entry.ref || null;       // primary reference image
+        row['__patternImage__'] = entry.pattern || null;   // secondary pattern/design image
       }
     });
 
