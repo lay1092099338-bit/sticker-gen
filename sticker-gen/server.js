@@ -278,6 +278,16 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 
   const circleRule = 'The circular sticker must fill the ENTIRE square canvas from edge to edge — the circle diameter equals the canvas width. The four corners show transparent background. No padding, no margin.';
 
+  // ── Variation hints: same style family, different details ──
+  const variationHints = [
+    'Arrange the decorative elements in a slightly different layout.',
+    'Try a slightly different shade or tint of the main color palette.',
+    'Vary the sizes and positions of the decorative motifs.',
+    'Use a different arrangement of the background elements.',
+    'Adjust the balance between text and illustration slightly.'
+  ];
+  const variationHint = variationHints[variantIndex] || variationHints[0];
+
   // ── WITH reference image ──
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
     return `Look at the reference image. Create a similar style circular sticker.
@@ -285,7 +295,8 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 ${themeLine}
 ${textLine}
 
-Match the reference image’s style, colors, illustration technique, and overall aesthetic. The result should look like it belongs to the same design series.
+Match the reference image’s style, colors, illustration technique, and overall aesthetic. The result should look like it belongs to the same design series, but not be an exact copy.
+${variationHint}
 ${printQuality}
 ${circleRule}
 Do not add any text other than what is specified above. Do not include human hands or body parts.
@@ -298,6 +309,7 @@ Do not add any text other than what is specified above. Do not include human han
 
 ${themeLine}
 ${textLine}
+${variationHint}
 
 ${printQuality}
 ${circleRule}
