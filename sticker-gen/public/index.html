@@ -617,22 +617,19 @@ function renderCards(){
   if(!cardStates.length){wrap.innerHTML='<div class="empty-hint">没有有效数据</div>';return;}
 
   // Determine grouping key:
-  // If no embedded images at all AND no theme column — group by copywriting (text)
-  const hasAnyEmbedded = cardStates.some(c => c.referenceImageB64);
+  // If no theme column — group by copywriting (text), regardless of whether embedded images exist
   const hasAnyTheme = cardStates.some(c => c.theme && c.theme.trim());
-  const groupByText = !hasAnyEmbedded && !hasAnyTheme;
+  const groupByText = !hasAnyTheme;
 
-  // Group by theme (or copywriting when no theme/reference available)
+  // Group by theme (or copywriting when no theme column)
   const groups = {};
   cardStates.forEach((c,i)=>{
     let key;
     if (groupByText) {
-      // No reference images and no theme column: group by copywriting text
       key = (c.copywriting && c.copywriting.trim()) ? c.copywriting.trim() : '未分组';
     } else {
       key = c._groupKey || c.theme || '未分组';
     }
-    // Store resolved group key on the card so renderThemeStrip can find it
     c._groupKey = key;
     if(!groups[key]) groups[key]=[];
     groups[key].push(i);
