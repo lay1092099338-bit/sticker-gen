@@ -304,11 +304,13 @@ tr:hover td{background:var(--pink-light)}
         <img id="imgEditPreview" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2.5px solid #e9d5ff" src="" alt="preview">
       </div>
       <div style="flex:1">
-        <div class="modal-label">快捷指令</div>
+        <div class="modal-label">快捷指令 <span style="font-size:11px;color:#94a3b8;font-weight:400">(点击追加,可多选组合)</span></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
           <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff" onclick="setEditInstruction('text')">✏️ 换文字</button>
           <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#fce7f3;color:#be185d;border:1.5px solid #fbc4d9" onclick="setEditInstruction('main')">🎨 换主图</button>
           <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0" onclick="setEditInstruction('deco')">✨ 换装饰</button>
+          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa" onclick="setEditInstruction('layout')">🔀 换布局</button>
+          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0" onclick="document.getElementById('imgEditInstruction').value='';document.getElementById('imgEditInstruction').focus()">🗑️ 清空</button>
         </div>
         <div class="modal-label">修改指令</div>
         <textarea class="modal-instruction" id="imgEditInstruction" rows="4" placeholder="描述你想改什么..."></textarea>
@@ -319,6 +321,110 @@ tr:hover td{background:var(--pink-light)}
     <div class="modal-actions">
       <button class="modal-btn modal-btn-cancel" onclick="closeImgEditModal()">取消</button>
       <button class="modal-btn modal-btn-primary" id="btnImgEdit" onclick="runImgEdit()">✨ 开始编辑</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH NUMBER MODAL -->
+<div class="modal-overlay" id="batchNumModal">
+  <div class="modal" style="max-width:680px;width:100%">
+    <div class="modal-title">🔢 批量换数字</div>
+    <div style="display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap">
+      <!-- left: canvas selector -->
+      <div style="flex:0 0 auto">
+        <div class="modal-label">第一步:拖框选中图中的数字区域</div>
+        <div style="position:relative;display:inline-block;border:2px solid #e2e8f0;border-radius:8px;overflow:hidden;cursor:crosshair" id="bnCanvasWrap">
+          <canvas id="bnCanvas" width="320" height="320" style="width:320px;height:320px;display:block"></canvas>
+          <canvas id="bnOverlay" width="320" height="320" style="position:absolute;inset:0;width:320px;height:320px;display:block"></canvas>
+        </div>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">鼠标拖框选定数字区域</div>
+      </div>
+      <!-- right: settings -->
+      <div style="flex:1;min-width:200px">
+        <div class="modal-label">第二步:输入数字范围或列表</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="number" id="bnRangeFrom" placeholder="起" min="0" style="width:70px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:14px">
+          <span style="align-self:center;color:#64748b">至</span>
+          <input type="number" id="bnRangeTo" placeholder="止" min="0" style="width:70px;padding:6px 8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:14px">
+          <button class="modal-btn" style="padding:6px 10px;font-size:12px" onclick="bnFillRange()">+ 填入</button>
+        </div>
+        <div class="modal-label">或自定义列表(逗号分隔)</div>
+        <textarea id="bnList" rows="3" style="width:100%;padding:8px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;resize:vertical" placeholder="1,2,3,5,10,18,20,25,30,40"></textarea>
+        <div class="modal-label" style="margin-top:10px">字体颜色(点图采色 或 手动选)</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="color" id="bnColor" value="#ffffff" style="width:36px;height:32px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;padding:2px">
+          <button class="modal-btn" style="padding:6px 10px;font-size:12px" onclick="bnPickColor()">&#128449; 从图采色</button>
+          <span id="bnColorHex" style="font-size:12px;color:#64748b">#ffffff</span>
+        </div>
+        <div class="modal-label" style="margin-top:8px">描边颜色(增加可读性)</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="color" id="bnStrokeColor" value="#000000" style="width:36px;height:32px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;padding:2px" oninput="bnPreview()">
+          <span style="font-size:12px;color:#64748b">描边</span>
+          <label style="font-size:12px;color:#475569;display:flex;align-items:center;gap:4px">
+            <input type="checkbox" id="bnUseBg" onchange="bnPreview()"> 填涂背景色
+            <input type="color" id="bnBgColor" value="#ffffff" style="width:28px;height:24px;border:1px solid #e2e8f0;border-radius:4px;cursor:pointer;padding:1px;margin-left:4px" oninput="bnPreview()">
+          </label>
+        </div>
+        <div class="modal-label" style="margin-top:10px">字体大小</div>
+        <input type="range" id="bnFontSize" min="10" max="120" value="40" style="width:100%" oninput="document.getElementById('bnFontSizeVal').textContent=this.value+'px';bnPreview()">
+        <span id="bnFontSizeVal" style="font-size:12px;color:#64748b">40px</span>
+        <div style="margin-top:4px">
+          <label style="font-size:12px;color:#475569"><input type="checkbox" id="bnBold" checked onchange="bnPreview()"> 粗体</label>
+        </div>
+        <div class="modal-label" style="margin-top:10px">预览(以第一个数字为例)</div>
+        <canvas id="bnPreviewCanvas" width="80" height="80" style="border-radius:8px;border:1px solid #e2e8f0"></canvas>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="modal-btn" onclick="closeBatchNumModal()" style="background:#f1f5f9;color:#475569">取消</button>
+      <button class="modal-btn" onclick="bnGenerate()" style="background:#6366f1;color:white">✨ 批量生成</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH NUM RESULT MODAL -->
+<div class="modal-overlay" id="batchNumResultModal">
+  <div class="modal" style="max-width:700px;width:100%">
+    <div class="modal-title">📦 批量生成结果</div>
+    <div id="bnResultGrid" style="display:flex;flex-wrap:wrap;gap:10px;max-height:400px;overflow-y:auto;padding:4px"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="modal-btn" onclick="document.getElementById('batchNumResultModal').classList.remove('show')" style="background:#f1f5f9;color:#475569">关闭</button>
+      <button class="modal-btn" onclick="bnDownloadAll()" style="background:#6366f1;color:white">⬇️ 全部下载</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPLIT LAYER MODAL -->
+<div class="modal-overlay" id="splitLayerModal">
+  <div class="modal" style="max-width:640px;width:100%">
+    <div class="modal-title">✂️ 拆分图层</div>
+    <div id="splitLayerStatus" style="text-align:center;padding:20px;color:#64748b;font-size:14px">
+      点击「开始拆层」,AI 将分别生成背景图和文字图
+    </div>
+    <div id="splitLayerResult" style="display:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <!-- bg layer -->
+        <div style="text-align:center">
+          <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">🖼️ 背景图(无文字)</div>
+          <img id="splitBgImg" src="" style="width:100%;border-radius:12px;border:1px solid #e2e8f0">
+          <button class="modal-btn" style="margin-top:10px;width:100%;background:#6366f1;color:white" onclick="splitDownload('bg')">⬇️ 下载背景图</button>
+        </div>
+        <!-- text layer -->
+        <div style="text-align:center">
+          <div style="font-size:13px;font-weight:600;color:#374151;margin-bottom:8px">✏️ 文字图(透明背景)</div>
+          <div style="background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/16px 16px;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
+            <img id="splitTextImg" src="" style="width:100%;display:block">
+          </div>
+          <button class="modal-btn" style="margin-top:10px;width:100%;background:#6366f1;color:white" onclick="splitDownload('text')">⬇️ 下载文字图</button>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:#f8fafc;border-radius:8px;font-size:12px;color:#64748b">
+        💡 背景图 + 文字图合并即可还原原图;设计师可单独替换文字层
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="modal-btn" onclick="closeSplitLayerModal()" style="background:#f1f5f9;color:#475569">关闭</button>
+      <button class="modal-btn" id="splitLayerStartBtn" onclick="doSplitLayer()" style="background:#6366f1;color:white">✨ 开始拆层</button>
     </div>
   </div>
 </div>
@@ -550,7 +656,7 @@ function renderCards(){
   document.getElementById('btnAll').disabled=false;
   const sel=document.getElementById('testIndex');
   if(sel){
-    sel.innerHTML=cardStates.map((c,i)=>`<option value="${i}">第 ${i+1} 张${c.copywriting?' — '+c.copywriting.slice(0,18):''}</option>`).join('');
+    sel.innerHTML=cardStates.map((c,i)=>`<option value="${i}">第 ${i+1} 张${c.copywriting?' - '+c.copywriting.slice(0,18):''}</option>`).join('');
   }
   // Render preview placeholders for all themes immediately after DOM is built
   requestAnimationFrame(() => {
@@ -560,7 +666,7 @@ function renderCards(){
 }
 
 function cardSettingHTML(c,i){
-  // Card status badge only — style select and action buttons moved to theme-group header
+  // Card status badge only - style select and action buttons moved to theme-group header
   return `<div id="card-${i}" style="display:none"><div class="card-status pending" id="status-${i}">等待生成</div></div>`;
 }
 
@@ -739,6 +845,8 @@ function renderThemeStrip(theme) {
           <button class="strip-icon-btn" onclick="event.stopPropagation();openImgEditModal(${i},${idx},cardStates[${i}].copywriting)" title="AI编辑">🖌️</button>
           <button class="strip-icon-btn" onclick="event.stopPropagation();openEditModalForImg(${i})" title="调整Prompt">✏️</button>
           <button class="strip-icon-btn" onclick="event.stopPropagation();downloadStripImg(${i},${idx})" title="导出">⬇️</button>
+          <button class="strip-icon-btn" onclick="event.stopPropagation();openBatchNumModal(${i},${idx})" title="批量换数字">🔢</button>
+          <button class="strip-icon-btn" onclick="event.stopPropagation();openSplitLayerModal(${i},${idx})" title="拆分图层">✂️</button>
         </div>
       </div>`);
     });
@@ -782,6 +890,405 @@ function openBatchPrompt(safeTheme) {
   if (!card) return;
   openEditModal(cardStates.indexOf(card));
 }
+
+// ===== BATCH NUMBER REPLACE =====
+const BN_SIZE = 320; // canvas display size
+let bnCardIdx = -1, bnImgIdx = -1;
+let bnRect = null;
+let bnDragging = false, bnDragStart = null;
+let bnSourceImg = null;
+let bnPickingColor = false;
+let bnGeneratedBlobs = [];
+
+function openBatchNumModal(cardIdx, imgIdx) {
+  const c = cardStates[cardIdx];
+  if (!c.generatedImages || !c.generatedImages[imgIdx]) { showToast('请先生成图片', 'error'); return; }
+  bnCardIdx = cardIdx; bnImgIdx = imgIdx;
+  bnRect = null; bnPickingColor = false; bnGeneratedBlobs = [];
+  document.getElementById('bnList').value = '';
+  document.getElementById('bnRangeFrom').value = '';
+  document.getElementById('bnRangeTo').value = '';
+  document.getElementById('bnColor').value = '#ffffff';
+  document.getElementById('bnColorHex').textContent = '#ffffff';
+  document.getElementById('bnFontSize').value = 40;
+  document.getElementById('bnFontSizeVal').textContent = '40px';
+  document.getElementById('bnBold').checked = true;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    bnSourceImg = img;
+    const cvs = document.getElementById('bnCanvas');
+    const ctx = cvs.getContext('2d');
+    ctx.clearRect(0, 0, BN_SIZE, BN_SIZE);
+    ctx.drawImage(img, 0, 0, BN_SIZE, BN_SIZE);
+    const ovl = document.getElementById('bnOverlay');
+    ovl.getContext('2d').clearRect(0, 0, BN_SIZE, BN_SIZE);
+  };
+  img.src = c.generatedImages[imgIdx].url;
+
+  document.getElementById('batchNumModal').classList.add('show');
+  bnInitDrag();
+}
+
+function closeBatchNumModal() {
+  document.getElementById('batchNumModal').classList.remove('show');
+  bnPickingColor = false;
+}
+
+// bind modal backdrop click directly (no DOMContentLoaded needed)
+(function() {
+  function bindOnce(id, fn) {
+    const el = document.getElementById(id);
+    if (el && !el._bnBound) { el._bnBound = true; el.addEventListener('click', fn); }
+  }
+  function tryBind() {
+    const m1 = document.getElementById('batchNumModal');
+    const m2 = document.getElementById('batchNumResultModal');
+    const col = document.getElementById('bnColor');
+    if (!m1 || !m2 || !col) { setTimeout(tryBind, 50); return; }
+    bindOnce('batchNumModal', function(e){ if(e.target===this) closeBatchNumModal(); });
+    bindOnce('batchNumResultModal', function(e){ if(e.target===this) this.classList.remove('show'); });
+    if (!col._bnColorBound) {
+      col._bnColorBound = true;
+      col.addEventListener('input', function(){ document.getElementById('bnColorHex').textContent=this.value; bnPreview(); });
+    }
+  }
+  tryBind();
+})();
+
+function bnDrawSelection() {
+  const ovl = document.getElementById('bnOverlay');
+  const ctx = ovl.getContext('2d');
+  ctx.clearRect(0, 0, BN_SIZE, BN_SIZE);
+  if (!bnRect) return;
+  ctx.strokeStyle = '#6366f1';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 3]);
+  ctx.strokeRect(bnRect.x, bnRect.y, bnRect.w, bnRect.h);
+  ctx.fillStyle = 'rgba(99,102,241,0.15)';
+  ctx.fillRect(bnRect.x, bnRect.y, bnRect.w, bnRect.h);
+}
+
+function bnInitDrag() {
+  const oldOvl = document.getElementById('bnOverlay');
+  const newOvl = oldOvl.cloneNode(true);
+  oldOvl.parentNode.replaceChild(newOvl, oldOvl);
+
+  function getPos(e) {
+    const r = newOvl.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: Math.max(0, Math.min(BN_SIZE, (cx - r.left) * (BN_SIZE / r.width))),
+      y: Math.max(0, Math.min(BN_SIZE, (cy - r.top)  * (BN_SIZE / r.height)))
+    };
+  }
+
+  newOvl.addEventListener('mousedown', e => {
+    if (bnPickingColor) { bnDoPickColor(e); return; }
+    bnDragging = true;
+    bnDragStart = getPos(e);
+    bnRect = null;
+    e.preventDefault();
+  });
+  newOvl.addEventListener('mousemove', e => {
+    if (!bnDragging) return;
+    const p = getPos(e);
+    bnRect = {
+      x: Math.min(bnDragStart.x, p.x), y: Math.min(bnDragStart.y, p.y),
+      w: Math.abs(p.x - bnDragStart.x), h: Math.abs(p.y - bnDragStart.y)
+    };
+    bnDrawSelection();
+  });
+  newOvl.addEventListener('mouseup', e => {
+    if (!bnDragging) return;
+    bnDragging = false;
+    if (bnRect && bnRect.w < 4 && bnRect.h < 4) bnRect = null;
+    bnDrawSelection();
+    bnPreview();
+  });
+}
+
+function bnPickColor() {
+  bnPickingColor = true;
+  document.getElementById('bnCanvasWrap').style.cursor = 'crosshair';
+  showToast('在图上点击任意位置取色');
+}
+
+function bnDoPickColor(e) {
+  const cvs = document.getElementById('bnCanvas');
+  const r = cvs.getBoundingClientRect();
+  const x = Math.round((e.clientX - r.left) * (BN_SIZE / r.width));
+  const y = Math.round((e.clientY - r.top)  * (BN_SIZE / r.height));
+  const px = cvs.getContext('2d').getImageData(Math.min(x, BN_SIZE-1), Math.min(y, BN_SIZE-1), 1, 1).data;
+  const hex = '#' + [px[0],px[1],px[2]].map(v => v.toString(16).padStart(2,'0')).join('');
+  document.getElementById('bnColor').value = hex;
+  document.getElementById('bnColorHex').textContent = hex;
+  bnPickingColor = false;
+  document.getElementById('bnCanvasWrap').style.cursor = 'crosshair';
+  showToast('已采色: ' + hex);
+  bnPreview();
+}
+
+function bnFillRange() {
+  const from = parseInt(document.getElementById('bnRangeFrom').value);
+  const to   = parseInt(document.getElementById('bnRangeTo').value);
+  if (isNaN(from) || isNaN(to) || from > to) { showToast('请输入有效范围', 'error'); return; }
+  const nums = [];
+  for (let i = from; i <= to; i++) nums.push(i);
+  document.getElementById('bnList').value = nums.join(',');
+  bnPreview();
+}
+
+function bnGetNumbers() {
+  return document.getElementById('bnList').value
+    .split(/[,\s\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+}
+
+function bnPreview() {
+  if (!bnSourceImg || !bnRect) return;
+  const nums = bnGetNumbers();
+  const pvs = document.getElementById('bnPreviewCanvas');
+  bnDrawReplaced(pvs, 80, 80, nums[0] || '1');
+}
+
+function bnDrawReplaced(targetCanvas, W, H, numStr) {
+  if (!bnSourceImg || !bnRect) return;
+  const ctx = targetCanvas.getContext('2d');
+  const sx = W / BN_SIZE, sy = H / BN_SIZE;
+  ctx.clearRect(0, 0, W, H);
+  ctx.drawImage(bnSourceImg, 0, 0, W, H);
+
+  const rx = bnRect.x * sx, ry = bnRect.y * sy;
+  const rw = bnRect.w * sx, rh = bnRect.h * sy;
+
+  // Optional: fill background only if user checked the option
+  const useBg = document.getElementById('bnUseBg') && document.getElementById('bnUseBg').checked;
+  if (useBg) {
+    const bgColor = document.getElementById('bnBgColor') ? document.getElementById('bnBgColor').value : '#ffffff';
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(rx - 1, ry - 1, rw + 2, rh + 2);
+  }
+
+  const fontSize = parseInt(document.getElementById('bnFontSize').value) * sy;
+  const bold  = document.getElementById('bnBold').checked;
+  const color = document.getElementById('bnColor').value;
+
+  // Draw text with stroke for readability (no bg needed)
+  ctx.font = `${bold ? 'bold ' : ''}${fontSize}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const cx2 = rx + rw / 2, cy2 = ry + rh / 2;
+
+  // Stroke (outline) for contrast
+  ctx.strokeStyle = document.getElementById('bnStrokeColor') ? document.getElementById('bnStrokeColor').value : '#000000';
+  ctx.lineWidth = Math.max(1, fontSize * 0.08);
+  ctx.lineJoin = 'round';
+  ctx.strokeText(numStr, cx2, cy2);
+
+  // Fill
+  ctx.fillStyle = color;
+  ctx.fillText(numStr, cx2, cy2);
+}
+
+async function bnGenerate() {
+  if (!bnSourceImg || !bnRect) { showToast('请先拖框选定数字区域', 'error'); return; }
+  const nums = bnGetNumbers();
+  if (!nums.length) { showToast('请输入数字列表', 'error'); return; }
+  showToast(`正在生成 ${nums.length} 张...`);
+  bnGeneratedBlobs = [];
+  for (const num of nums) {
+    const cvs = document.createElement('canvas');
+    cvs.width = 1024; cvs.height = 1024;
+    bnDrawReplaced(cvs, 1024, 1024, num);
+    bnGeneratedBlobs.push({ num, dataUrl: cvs.toDataURL('image/png') });
+  }
+  const grid = document.getElementById('bnResultGrid');
+  grid.innerHTML = bnGeneratedBlobs.map(({num, dataUrl}) =>
+    `<div style="text-align:center">
+      <img src="${dataUrl}" style="width:100px;height:100px;object-fit:cover;border-radius:50%;border:2px solid #e2e8f0">
+      <div style="font-size:12px;color:#64748b;margin-top:4px">${num}</div>
+    </div>`
+  ).join('');
+  document.getElementById('batchNumModal').classList.remove('show');
+  document.getElementById('batchNumResultModal').classList.add('show');
+  showToast(`生成完成!${nums.length} 张`);
+}
+
+function bnDownloadAll() {
+  if (!bnGeneratedBlobs.length) return;
+  const c = cardStates[bnCardIdx];
+  const label = (c?.copywriting || 'sticker').replace(/[^\w\u4e00-\u9fa5]/g, '_').slice(0, 15);
+  bnGeneratedBlobs.forEach(({num, dataUrl}, i) => {
+    setTimeout(() => {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = `${label}_${num}.png`;
+      a.click();
+    }, i * 200);
+  });
+  showToast(`正在下载 ${bnGeneratedBlobs.length} 张...`);
+}
+// ===== END BATCH NUMBER REPLACE =====
+
+// ===== SPLIT LAYER =====
+let splitCardIdx = -1, splitImgIdx = -1;
+let splitBgUrl = null, splitTextUrl = null;
+
+function openSplitLayerModal(cardIdx, imgIdx) {
+  const c = cardStates[cardIdx];
+  if (!c.generatedImages || !c.generatedImages[imgIdx]) { showToast('请先生成图片', 'error'); return; }
+  splitCardIdx = cardIdx; splitImgIdx = imgIdx;
+  splitBgUrl = null; splitTextUrl = null;
+  document.getElementById('splitLayerStatus').textContent = '点击「开始拆层」,AI 将分别生成背景图和文字图';
+  document.getElementById('splitLayerStatus').style.display = 'block';
+  document.getElementById('splitLayerResult').style.display = 'none';
+  document.getElementById('splitLayerStartBtn').disabled = false;
+  document.getElementById('splitLayerStartBtn').textContent = '✨ 开始拆层';
+  document.getElementById('splitLayerModal').classList.add('show');
+  document.getElementById('splitLayerModal').onclick = function(e){ if(e.target===this) closeSplitLayerModal(); };
+}
+
+function closeSplitLayerModal() {
+  document.getElementById('splitLayerModal').classList.remove('show');
+}
+
+async function doSplitLayer() {
+  const c = cardStates[splitCardIdx];
+  const imgUrl = c.generatedImages[splitImgIdx].url;
+  const apiKey = document.getElementById('apiKey')?.value?.trim() || '';
+
+  const btn = document.getElementById('splitLayerStartBtn');
+  btn.disabled = true;
+  btn.textContent = '处理中...';
+  const statusEl = document.getElementById('splitLayerStatus');
+  statusEl.style.display = 'block';
+  document.getElementById('splitLayerResult').style.display = 'none';
+
+  // Convert img to base64
+  let imgB64;
+  try {
+    imgB64 = await urlToBase64(imgUrl);
+  } catch(e) {
+    showToast('图片读取失败: ' + e.message, 'error');
+    btn.disabled = false; btn.textContent = '✨ 开始拆层';
+    return;
+  }
+
+  // Step 1: Background (remove text)
+  statusEl.textContent = '⏳ 第 1/2 步:AI 去除文字,生成背景图...';
+  let bgUrl;
+  try {
+    const bgResp = await fetch('/api/edit-image', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        imageB64: imgB64,
+        instruction: 'Remove all text and numbers from the sticker. Fill the text areas seamlessly with the surrounding background pattern, colors and decorations so no text is visible. Keep all non-text graphic elements intact. Output the same circular sticker without any text.',
+        apiKey
+      })
+    });
+    const bgJson = await bgResp.json();
+    if (!bgJson.success) throw new Error(bgJson.error || 'API error');
+    bgUrl = bgJson.imageUrl;
+    splitBgUrl = bgUrl;
+  } catch(e) {
+    showToast('背景图生成失败: ' + e.message, 'error');
+    statusEl.textContent = '❌ 背景图生成失败: ' + e.message;
+    btn.disabled = false; btn.textContent = '✨ 重试';
+    return;
+  }
+
+  // Step 2: Text only (transparent bg) - generate with white bg then strip it via Canvas
+  statusEl.textContent = '⏳ 第 2/2 步:AI 提取文字层(透明底)...';
+  let textUrl;
+  try {
+    const textResp = await fetch('/api/edit-image', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        imageB64: imgB64,
+        instruction: 'Extract ONLY the text/numbers from this sticker. Keep the text exactly as-is with original colors and positions. Place the text on a pure white (#ffffff) background - no decorative elements, no illustrations, no border, no gradients. Output just the text on plain white.',
+        apiKey
+      })
+    });
+    const textJson = await textResp.json();
+    if (!textJson.success) throw new Error(textJson.error || 'API error');
+    // Post-process: knock out the white background so the text floats on transparent
+    textUrl = await removeWhiteBackground(textJson.imageUrl);
+    splitTextUrl = textUrl;
+  } catch(e) {
+    showToast('文字图生成失败: ' + e.message, 'error');
+    statusEl.textContent = '❌ 文字图生成失败: ' + e.message;
+    btn.disabled = false; btn.textContent = '✨ 重试';
+    return;
+  }
+
+  // Show results
+  document.getElementById('splitBgImg').src = bgUrl;
+  document.getElementById('splitTextImg').src = textUrl;
+  statusEl.style.display = 'none';
+  document.getElementById('splitLayerResult').style.display = 'block';
+  btn.disabled = false; btn.textContent = '🔄 重新拆层';
+  showToast('拆层完成!');
+}
+
+function splitDownload(type) {
+  const url = type === 'bg' ? splitBgUrl : splitTextUrl;
+  if (!url) return;
+  const c = cardStates[splitCardIdx];
+  const label = (c?.copywriting || 'sticker').replace(/[^\w一-龥]/g,'_').slice(0,15);
+  const suffix = type === 'bg' ? '_background' : '_text_layer';
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = label + suffix + '.png';
+  a.click();
+}
+
+async function urlToBase64(url) {
+  if (url.startsWith('data:')) return url;
+  const resp = await fetch('/api/fetch-image', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ url })
+  });
+  const json = await resp.json();
+  if (json.data) return json.data;
+  if (json.b64) return json.b64;
+  throw new Error('fetch-image failed');
+}
+
+/**
+ * Remove near-white background from a data URL image → returns transparent PNG data URL.
+ * Any pixel whose R, G, B are all >= threshold gets alpha = 0.
+ */
+function removeWhiteBackground(dataUrl, threshold = 230) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth || img.width;
+      const h = img.naturalHeight || img.height;
+      const cvs = document.createElement('canvas');
+      cvs.width = w; cvs.height = h;
+      const ctx = cvs.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, w, h);
+      const d = imageData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        if (d[i] >= threshold && d[i+1] >= threshold && d[i+2] >= threshold) {
+          d[i+3] = 0;
+        }
+      }
+      ctx.putImageData(imageData, 0, 0);
+      resolve(cvs.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+// ===== END SPLIT LAYER =====
+
 
 function downloadTheme(safeTheme) {
   let count = 0;
@@ -858,14 +1365,22 @@ if (typeof mode === 'number') {
       pt.textContent=`正在生成第 ${i+1} 张${variantLabel}(${done+1}/${totalTasks})...`;
 
       try{
-        // 确定生成类型:相似(0-1) 或 创意(2-4)
+        // 确定生成类型：相似(0-1) 或 创意(2-4)
         const genType = variant < 2 ? 'similar' : 'creative';
+
+        // Bug3: 如果该行没有参考图，尝试共享同一主题组里其他行的参考图
+        let sharedRefImg = c.referenceImageB64;
+        if (!sharedRefImg) {
+          const sameTheme = cardStates.find(other => other !== c && !!(other.referenceImageB64) && (other.theme || '未分组') === (c.theme || '未分组'));
+          if (sameTheme) sharedRefImg = sameTheme.referenceImageB64;
+        }
 
         const ir=await fetch('/api/generate-variant',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
           copywriting:c.copywriting,
           theme:c.theme,
-          hasReferenceImg:!!c.referenceImageB64,
-          insertedImageB64:c.insertedImageB64,
+          hasReferenceImg:!!(sharedRefImg),
+          referenceImageB64:sharedRefImg||null,
+          insertedImageB64:c.insertedImageB64||null,
           customPrompt:c.customPrompt,
           variantType:genType,
           variantIndex:variant,
@@ -937,15 +1452,28 @@ function setEditInstruction(type) {
   const c = imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex] : null;
   const text = c?.copywriting || '';
   const ta = document.getElementById('imgEditInstruction');
-  if (type === 'text') {
-    ta.value = `把图中的文字改成“${text}”`;
-  } else if (type === 'main') {
-    ta.value = `把中间的主图换成：`;
-  } else if (type === 'deco') {
-    ta.value = `把图案围的装饰小元素换成：`;
+  const existing = ta.value.trim();
+
+  // Templates: what to append
+  const templates = {
+    text:   `把图中的文字改成"${text}"`,
+    main:   `把中间的主图换成:`,
+    deco:   `把图案围的装饰小元素换成:`,
+    layout: `调整文字和主图的位置:`,
+  };
+  const snippet = templates[type];
+  if (!snippet) return;
+
+  // Append with 、separator if something already in box
+  if (existing) {
+    // If last char isn't , or 、or newline, add ,
+    const sep = /[,,、\n]$/.test(existing) ? '' : ',';
+    ta.value = existing + sep + snippet;
+  } else {
+    ta.value = snippet;
   }
+
   ta.focus();
-  // Place cursor at end
   ta.selectionStart = ta.selectionEnd = ta.value.length;
 }
 

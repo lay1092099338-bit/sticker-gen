@@ -156,17 +156,19 @@ app.post('/api/edit-image', async (req, res) => {
 
 // ── Generate variant (similar or creative) ────────────────────────────────────
 app.post('/api/generate-variant', async (req, res) => {
-  const { copywriting, theme, hasReferenceImg, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
+  const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   
   try {
-    // 构建不同类型的prompt
-    const prompt = buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex);
+    // Build prompt — pass reference/inserted image for style hints
+    const styleHintImg = insertedImageB64 || referenceImageB64;
+    const prompt = buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
     
-    // 如果有自定义prompt且是创意类型，使用自定义prompt
+    // If custom prompt set and creative type, use custom prompt
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
     
-    const result = await callModelverse(effectiveKey, finalPrompt, null, insertedImageB64);
+    // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
+    const result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
     res.json({ success: true, imageUrl: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -231,6 +233,9 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
   if (variantType === 'similar') {
     if (hasReferenceImg) {
       styleInstruction = `CRITICAL: This is variant ${variantIndex + 1} of 2 "SIMILAR" versions. You MUST match the reference image style EXACTLY — replicate its color palette, illustration technique, decorative elements, composition, and overall aesthetic as closely as possible. The output should look like it came from the same design series.`;
+    } else if (insertedImageB64 && insertedImageB64.length > 100) {
+      // No URL reference but an embedded/inserted image was provided — analyse it and create a similar sticker
+      styleInstruction = `CRITICAL: Carefully analyse the provided reference image. Identify its illustration style, color palette, decorative motifs, composition and overall aesthetic. Then create a circular sticker that looks very similar in style — same vibe, same color family, same illustration technique. It should feel like part of the same design series.`;
     } else {
       styleInstruction = `Cute flat cartoon illustration style, soft harmonious colors matching the theme, delicate and charming. This is variant ${variantIndex + 1} of 2 similar versions.`;
     }
@@ -285,51 +290,8 @@ CRITICAL — Do NOT include:
 }
 
 async function callImageEdit(apiKey, imageB64, instruction) {
-  return new Promise((resolve, reject) => {
-    // Normalize base64
-    const b64data = imageB64.startsWith('data:') ? imageB64 : `data:image/png;base64,${imageB64}`;
-
-    const body = JSON.stringify({
-      model: 'Qwen/Qwen-Image-Edit',
-      prompt: instruction,
-      image: b64data,
-      size: '1024x1024'
-    });
-
-    const options = {
-      hostname: 'api.modelverse.cn',
-      port: 443,
-      path: '/v1/images/generations',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Length': Buffer.byteLength(body)
-      }
-    };
-
-    let data = '';
-    const req = https.request(options, (response) => {
-      response.on('data', chunk => data += chunk);
-      response.on('end', () => {
-        try {
-          const json = JSON.parse(data);
-          const item = json.data?.[0];
-          if (item?.b64_json) {
-            const b64 = item.b64_json.startsWith('data:') ? item.b64_json : `data:image/png;base64,${item.b64_json}`;
-            resolve(b64); return;
-          }
-          if (item?.url) { resolve(item.url); return; }
-          reject(new Error('No image in edit response: ' + JSON.stringify(json).slice(0, 300)));
-        } catch (e) {
-          reject(new Error('Parse error: ' + data.slice(0, 300)));
-        }
-      });
-    });
-    req.on('error', reject);
-    req.write(body);
-    req.end();
-  });
+  // Use Gemini 3 Pro via chat/completions (same as callModelverse)
+  return callModelverse(apiKey, instruction, imageB64, null);
 }
 
 async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB64) {
