@@ -270,17 +270,24 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
     ? `Also incorporate this additional visual element from the inserted image.`
     : '';
 
+  // ── Typography instruction — this is the biggest differentiator ──
   const textPart = copywriting
-    ? `Center text: "${copywriting}" — rendered in an elegant handwritten script/calligraphy font, large and clearly readable, prominently placed. Color should match and complement the theme. Do NOT add, remove, or change any words.`
+    ? `TYPOGRAPHY (most important element):
+  - The text "${copywriting}" is the VISUAL HERO of this sticker — it must be large, bold, and dominate the center
+  - Use a premium hand-lettering / calligraphy style: mix of thick and thin strokes, script font with flourishes
+  - Apply HIERARCHY: if the text has multiple words, make the most important word(s) significantly larger, others smaller
+  - Letters should have slight curves, diagonal lean, or creative arrangement (stacked, arched, or layered)
+  - Add subtle drop shadow or slight outline to make text pop against the background
+  - Text color should strongly contrast with background (e.g. deep teal on cream, dark navy on pastel)
+  - DO NOT add, remove, or change any words. Reproduce "${copywriting}" exactly.`
     : `No text on this sticker.`;
 
   let styleInstruction;
 
   if (variantType === 'similar') {
     if (hasReferenceImg) {
-      styleInstruction = `CRITICAL: This is variant ${variantIndex + 1} of 2 "SIMILAR" versions. You MUST match the reference image style EXACTLY — replicate its color palette, illustration technique, decorative elements, composition, and overall aesthetic as closely as possible. The output should look like it came from the same design series.`;
+      styleInstruction = `CRITICAL: This is variant ${variantIndex + 1} of 2 “SIMILAR” versions. You MUST match the reference image style EXACTLY — replicate its color palette, illustration technique, decorative elements, composition, and overall aesthetic as closely as possible. The output should look like it came from the same design series.`;
     } else if (insertedImageB64 && insertedImageB64.length > 100) {
-      // No URL reference but an embedded/inserted image was provided — analyse it and create a similar sticker
       styleInstruction = `CRITICAL: Carefully analyse the provided reference image. Identify its illustration style, color palette, decorative motifs, composition and overall aesthetic. Then create a circular sticker that looks very similar in style — same vibe, same color family, same illustration technique. It should feel like part of the same design series.`;
     } else {
       styleInstruction = `Cute flat cartoon illustration style, soft harmonious colors matching the theme, delicate and charming. This is variant ${variantIndex + 1} of 2 similar versions.`;
@@ -297,17 +304,17 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
     }
   }
 
-  // Build theme-aware description
+  // ── Theme-aware color palette ──
   const themeDesc = theme
-    ? `Theme: ${theme}. The background must be a rich solid color that perfectly fits the theme — fill every pixel inside the circle with color and illustration, NO plain or white empty areas anywhere inside the circle.`
-    : 'Use a background color that fits the overall design aesthetic and fills the entire circle completely.';
+    ? `Theme: ${theme}. Choose a WARM, SATURATED color palette that fits the theme — avoid pale grey or washed-out tones. The background must be a rich solid or gradient color that makes the sticker vibrant and eye-catching. Fill every pixel inside the circle with color and illustration.`
+    : 'Use a vibrant, warm color palette that fits the overall design aesthetic and fills the entire circle completely.';
 
-  // Build accent elements instruction
+  // ── Density / composition instruction ──
   const accentDesc = theme
-    ? `Small decorative accents must be scattered DENSELY throughout ALL empty areas inside the circle — there must be NO visible plain background or white space anywhere. Fill every gap with theme-appropriate micro elements (e.g. for a floral theme: tiny petals, leaves, dots; for a bee theme: honeycomb cells, pollen dots; for a party theme: confetti, stars, streamers, tiny hearts).`
-    : `Add small decorative accent elements densely covering ALL remaining space in the circle — no empty background visible anywhere.`;
+    ? `COMPOSITION: Pack the circular frame with theme-appropriate illustrations — arrange them tightly around the text so NO plain background is visible. Use varied sizes (large focal elements + medium fills + tiny accent details). For "${theme}": use characteristic motifs densely arranged in a wreath or scattered composition filling all gaps.`
+    : `COMPOSITION: Pack the circular frame with decorative elements around the text — no empty background visible anywhere inside the circle.`;
 
-  return `Create a circular sticker design, 5×5cm, for a party celebration.
+  return `Create a PREMIUM circular sticker design, 5×5cm, print-ready quality.
 
 ${themeDesc}
 
@@ -316,14 +323,15 @@ ${styleInstruction}
 ${insertedPart}
 
 Design requirements:
-- Shape: perfect circle. The illustration and background color must fill the ENTIRE circle edge-to-edge with ZERO white margins or padding — every pixel inside the circle must be part of the design
-- Border: a thin decorative ring at the very edge of the circle, color matching the theme
-- Illustration style: cute flat cartoon / warm illustration — NOT photorealistic
-- Colors: soft, harmonious palette fitting the theme — avoid dark or overly saturated tones
-- Layout: main theme illustration fills the circle background; ${textPart}
+- Shape: perfect circle filled ENTIRELY edge-to-edge — zero white margins inside the circle
+- Border: double decorative ring at the circle edge (thin outer line + slightly thicker inner line), colors matching the theme palette, adds premium finish
+- Illustration style: warm hand-illustrated / flat cartoon — NOT photorealistic, NOT line-art only
+- Colors: VIBRANT yet harmonious — think Rifle Paper Co. or vintage botanical poster aesthetic
 - ${accentDesc}
-- Clean, balanced, print-ready design — 300dpi equivalent
-- Output: square canvas, the circle fills the ENTIRE square from edge to edge — no white space, no padding, no margin outside the circle shape. Transparent or white pixels only OUTSIDE the circle boundary.
+- ${textPart}
+- The overall impression should be: beautiful, detailed, worth putting on a product
+- Clean, balanced, print-ready — 300dpi equivalent quality
+- Output: square canvas, circle fills the ENTIRE square edge-to-edge. Transparent or white pixels only OUTSIDE the circle boundary.
 
 CRITICAL — Do NOT include:
 - Any human hands, fingers, arms, or body parts
