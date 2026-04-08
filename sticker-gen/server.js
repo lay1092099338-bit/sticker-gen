@@ -114,7 +114,7 @@ function extractEmbeddedImages(buffer) {
 
   // ── Fallback: if XML parsing yielded nothing, map media files by sort order ──
   if (Object.keys(rowImageMap).length === 0) {
-    console.log('[extractImages] XML parse yielded 0 images — trying media fallback');
+    console.log('[extractImages] XML parse yielded 0 images - trying media fallback');
     try {
       const zip2 = new AdmZip(buffer);
       const mediaEntries = zip2.getEntries()
@@ -204,15 +204,15 @@ app.post('/api/edit-image', async (req, res) => {
 app.post('/api/generate-variant', async (req, res) => {
   const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  
+
   try {
-    // Build prompt — pass reference/inserted image for style hints
+    // Build prompt - pass reference/inserted image for style hints
     const styleHintImg = insertedImageB64 || referenceImageB64;
     const prompt = buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
-    
+
     // If custom prompt set and creative type, use custom prompt
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
-    
+
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
     const result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
     res.json({ success: true, imageUrl: result });
@@ -251,7 +251,7 @@ Return ONLY the revised prompt, no explanations.`;
 app.get('/api/search-images', async (req, res) => {
   const q = req.query.q || 'flower';
   try {
-    // Use Unsplash source API – returns list of images
+    // Use Unsplash source API - returns list of images
     const results = await searchUnsplash(q);
     res.json({ success: true, results });
   } catch (e) {
@@ -266,70 +266,75 @@ function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
-  const insertedPart = insertedImageB64
-    ? `Also incorporate this visual element from the reference image into the design.`
-    : '';
+  // ── Core strategy: less is more. With reference image, trust the model. ──
 
-  // ── Text instruction — keep it simple, let the model do typography ──
-  const textPart = copywriting
-    ? `Text: "${copywriting}" in a clean, elegant serif or classic hand-lettered font. Centered, clearly readable, large. Text color must contrast the background. Do NOT change, add, or remove any words.`
-    : `No text on this sticker.`;
+  const textLine = copywriting
+    ? `Text on the sticker: "${copywriting}". Do NOT change, add, or remove any words.`
+    : 'No text on this sticker.';
 
-  let styleInstruction;
+  const themeLine = theme ? `Theme/motif: ${theme}.` : '';
 
-  if (variantType === 'similar') {
-    if (hasReferenceImg) {
-      styleInstruction = `IMPORTANT: Match the reference image’s style exactly — same color palette, same illustration technique, same composition feel. This should look like part of the same design series. Variant ${variantIndex + 1} of 2.`;
-    } else if (insertedImageB64 && insertedImageB64.length > 100) {
-      styleInstruction = `IMPORTANT: Study the provided reference image carefully. Match its illustration style, color palette, decorative motifs and composition. The result should look like part of the same design series.`;
+  // ── WITH reference image: minimal prompt, let model analyse the image ──
+  if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
+    if (variantType === 'similar') {
+      return `Look at the reference image. Create a similar style circular sticker.
+
+${themeLine}
+${textLine}
+
+Match the reference image’s style, colors, illustration technique, and overall aesthetic. The result should look like it belongs to the same design series.
+Output a circular sticker on a square canvas, circle fills the entire square. Transparent background outside the circle.
+Do not add any text other than what is specified above. Do not include human hands or body parts.
+
+[Similar variant ${variantIndex + 1} of 2]`;
     } else {
-      styleInstruction = `Style: warm watercolor illustration with soft edges, like a premium greeting card or Rifle Paper Co. product. Variant ${variantIndex + 1} of 2.`;
-    }
-  } else {
-    const creativeStyles = [
-      `Creative twist: same ${theme || ''} theme but with a fresh color palette and different arrangement of elements. Keep it cohesive and polished.`,
-      `Alternative take: reinterpret the ${theme || ''} theme with different decorative details and a new composition. Still elegant and print-worthy.`,
-      `Bold reimagination: same ${theme || ''} concept but with a distinctive artistic approach — different colors, layout, and ornamental touches.`
-    ];
-    styleInstruction = creativeStyles[variantIndex - 2] || creativeStyles[0];
-    if (hasReferenceImg) {
-      styleInstruction += ` Draw style inspiration from the reference but create something original.`;
+      // Creative: inspired by reference but different
+      const creativeAngles = [
+        'Use a different color palette and composition, but keep the same overall vibe and quality.',
+        'Try a different layout and arrangement of elements, with fresh color accents.',
+        'Reimagine the design with a distinctive artistic twist while staying on-theme.'
+      ];
+      const angle = creativeAngles[variantIndex - 2] || creativeAngles[0];
+      return `Look at the reference image for style inspiration. Create a NEW circular sticker design for the same theme.
+
+${themeLine}
+${textLine}
+
+Do NOT copy the reference exactly — create something original. ${angle}
+Output a circular sticker on a square canvas, circle fills the entire square. Transparent background outside the circle.
+Do not add any text other than what is specified above. Do not include human hands or body parts.
+
+[Creative variant ${variantIndex - 2 + 1} of 3]`;
     }
   }
 
-  const themeNote = theme ? `Theme: "${theme}".` : '';
+  // ── WITHOUT reference image: give more guidance since model has nothing to go on ──
+  let styleHint;
+  if (variantType === 'similar') {
+    styleHint = `Style: warm hand-painted illustration, vibrant saturated colors, densely filled with ${theme || 'decorative'} motifs. Premium print-quality feel. Variant ${variantIndex + 1} of 2.`;
+  } else {
+    const hints = [
+      `Style: fresh creative take — try a different color palette and composition than typical ${theme || 'sticker'} designs.`,
+      `Style: artistic reinterpretation — different layout and color scheme, still polished and print-ready.`,
+      `Style: bold unique approach — distinctive colors and arrangement, premium quality feel.`
+    ];
+    styleHint = hints[variantIndex - 2] || hints[0];
+  }
 
-  return `Design a circular sticker (5×5cm, print-ready).
+  return `Create a circular sticker design (5×5cm, print-ready).
 
-${themeNote}
-${styleInstruction}
-${insertedPart}
+${themeLine}
+${textLine}
+${styleHint}
 
-Style reference: Rifle Paper Co. / Anna Bond botanical illustration aesthetic — warm watercolor, hand-painted feel, rich saturated colors (golden yellow, coral, sage green, navy accents), lush botanical or decorative motifs densely filling the circle.
-
-Layout:
 - Perfect circle, filled edge-to-edge, no white space inside
-- Thin elegant border ring (single fine line, color matching the palette)
-- ${textPart}
-- Decorative elements (${theme ? theme + '-related' : 'botanical/floral'} motifs) arranged in a wreath around the text, filling all space
-- Warm cream or soft colored background behind elements
+- Illustrations and decorative elements densely filling the circle
+- Thin border ring at the edge
+- Square canvas output, circle fills the entire square, transparent background outside
+- Do not add any text other than specified above
+- Do not include human hands or body parts
 
-Do NOT include:
-- Human hands, fingers, or body parts
-- Outer ribbons, badge frames, or 3D effects
-- White/empty areas inside the circle
-- Any extra text not specified above
-
-Output: square canvas, circle fills the entire square. Background outside circle = transparent.
-
-CRITICAL — Do NOT include:
-- Any human hands, fingers, arms, or body parts
-- Any person holding or touching the sticker
-- Outer ribbon rosette, hanging ribbons, or badge frame
-- White or empty background inside the circle
-- Any scene, shadow or glow outside the circle
-
-[Variant: ${variantType.toUpperCase()} #${variantIndex + 1}]`;
+[${variantType} #${variantIndex + 1}]`;
 }
 
 async function callImageEdit(apiKey, imageB64, instruction) {
@@ -350,11 +355,11 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
       content = [];
       content.push({ type: 'text', text: prompt });
       if (hasRefImage) {
-        const mime = referenceImageB64.startsWith('data:') 
-          ? referenceImageB64.split(';')[0].split(':')[1] 
+        const mime = referenceImageB64.startsWith('data:')
+          ? referenceImageB64.split(';')[0].split(':')[1]
           : 'image/jpeg';
-        const b64data = referenceImageB64.startsWith('data:') 
-          ? referenceImageB64.split(',')[1] 
+        const b64data = referenceImageB64.startsWith('data:')
+          ? referenceImageB64.split(',')[1]
           : referenceImageB64;
         content.push({
           type: 'image_url',
