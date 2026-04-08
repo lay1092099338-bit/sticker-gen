@@ -274,6 +274,14 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 
   const themeLine = theme ? `Theme/motif: ${theme}.` : '';
 
+  // ── Circle sizing: critical for filling the canvas ──
+  const circleRule = 'The circular sticker must fill the ENTIRE square canvas from edge to edge — the circle diameter equals the canvas width. The four corners of the square should show transparent background where the circle does not reach. No padding, no margin, no gap between circle edge and canvas edge.';
+
+  // ── Richness hint: encourage variety in decorative elements ──
+  const richnessHint = theme
+    ? `Fill the circle with a RICH VARIETY of different ${theme}-related small illustrations — use at least 6-8 distinct motif types (not just 2-3 repeated). Each element should be different, arranged densely in a wreath or scattered pattern around the text.`
+    : `Fill the circle with a rich variety of different decorative illustrations — at least 6-8 distinct motif types arranged densely around the text.`;
+
   // ── WITH reference image: minimal prompt, let model analyse the image ──
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
     if (variantType === 'similar') {
@@ -283,25 +291,19 @@ ${themeLine}
 ${textLine}
 
 Match the reference image’s style, colors, illustration technique, and overall aesthetic. The result should look like it belongs to the same design series.
-Output a circular sticker on a square canvas, circle fills the entire square. Transparent background outside the circle.
+${richnessHint}
+${circleRule}
 Do not add any text other than what is specified above. Do not include human hands or body parts.
 
 [Similar variant ${variantIndex + 1} of 2]`;
     } else {
-      // Creative: inspired by reference but different
-      const creativeAngles = [
-        'Use a different color palette and composition, but keep the same overall vibe and quality.',
-        'Try a different layout and arrangement of elements, with fresh color accents.',
-        'Reimagine the design with a distinctive artistic twist while staying on-theme.'
-      ];
-      const angle = creativeAngles[variantIndex - 2] || creativeAngles[0];
-      return `Look at the reference image for style inspiration. Create a NEW circular sticker design for the same theme.
+      return `Look at the reference image for style inspiration. Create a NEW and ORIGINAL circular sticker for the same theme. Be creative and free — surprise me.
 
 ${themeLine}
 ${textLine}
 
-Do NOT copy the reference exactly — create something original. ${angle}
-Output a circular sticker on a square canvas, circle fills the entire square. Transparent background outside the circle.
+${richnessHint}
+${circleRule}
 Do not add any text other than what is specified above. Do not include human hands or body parts.
 
 [Creative variant ${variantIndex - 2 + 1} of 3]`;
@@ -311,14 +313,9 @@ Do not add any text other than what is specified above. Do not include human han
   // ── WITHOUT reference image: give more guidance since model has nothing to go on ──
   let styleHint;
   if (variantType === 'similar') {
-    styleHint = `Style: warm hand-painted illustration, vibrant saturated colors, densely filled with ${theme || 'decorative'} motifs. Premium print-quality feel. Variant ${variantIndex + 1} of 2.`;
+    styleHint = `Style: warm hand-painted illustration, vibrant saturated colors, premium print-quality feel. Variant ${variantIndex + 1} of 2.`;
   } else {
-    const hints = [
-      `Style: fresh creative take — try a different color palette and composition than typical ${theme || 'sticker'} designs.`,
-      `Style: artistic reinterpretation — different layout and color scheme, still polished and print-ready.`,
-      `Style: bold unique approach — distinctive colors and arrangement, premium quality feel.`
-    ];
-    styleHint = hints[variantIndex - 2] || hints[0];
+    styleHint = `Be creative and free with the style — surprise me. Make it beautiful and print-worthy.`;
   }
 
   return `Create a circular sticker design (5×5cm, print-ready).
@@ -327,10 +324,8 @@ ${themeLine}
 ${textLine}
 ${styleHint}
 
-- Perfect circle, filled edge-to-edge, no white space inside
-- Illustrations and decorative elements densely filling the circle
-- Thin border ring at the edge
-- Square canvas output, circle fills the entire square, transparent background outside
+${richnessHint}
+${circleRule}
 - Do not add any text other than specified above
 - Do not include human hands or body parts
 
