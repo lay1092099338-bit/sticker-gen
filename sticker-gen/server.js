@@ -266,7 +266,7 @@ function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
-  // ── Core strategy: less is more. With reference image, trust the model. ──
+  // ── Core strategy: tell it what it IS (a commercial print product), not how to draw it. ──
 
   const textLine = copywriting
     ? `Text on the sticker: "${copywriting}". Do NOT change, add, or remove any words.`
@@ -274,62 +274,37 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 
   const themeLine = theme ? `Theme/motif: ${theme}.` : '';
 
-  // ── Circle sizing: critical for filling the canvas ──
-  const circleRule = 'The circular sticker must fill the ENTIRE square canvas from edge to edge — the circle diameter equals the canvas width. The four corners of the square should show transparent background where the circle does not reach. No padding, no margin, no gap between circle edge and canvas edge.';
+  const printQuality = 'This is a COMMERCIAL PRODUCT sticker for mass printing and retail sale. It must look clean, professional, and visually appealing — like something you would see on a premium product in a store. Not cluttered, not messy.';
 
-  // ── Richness hint: encourage variety in decorative elements ──
-  const richnessHint = theme
-    ? `Fill the circle with a RICH VARIETY of different ${theme}-related small illustrations — use at least 6-8 distinct motif types (not just 2-3 repeated). Each element should be different, arranged densely in a wreath or scattered pattern around the text.`
-    : `Fill the circle with a rich variety of different decorative illustrations — at least 6-8 distinct motif types arranged densely around the text.`;
+  const circleRule = 'The circular sticker must fill the ENTIRE square canvas from edge to edge — the circle diameter equals the canvas width. The four corners show transparent background. No padding, no margin.';
 
-  // ── WITH reference image: minimal prompt, let model analyse the image ──
+  // ── WITH reference image ──
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
-    if (variantType === 'similar') {
-      return `Look at the reference image. Create a similar style circular sticker.
+    return `Look at the reference image. Create a similar style circular sticker.
 
 ${themeLine}
 ${textLine}
 
 Match the reference image’s style, colors, illustration technique, and overall aesthetic. The result should look like it belongs to the same design series.
-${richnessHint}
+${printQuality}
 ${circleRule}
 Do not add any text other than what is specified above. Do not include human hands or body parts.
 
-[Similar variant ${variantIndex + 1} of 2]`;
-    } else {
-      return `Look at the reference image for style inspiration. Create a NEW and ORIGINAL circular sticker for the same theme. Be creative and free — surprise me.
+[Variant ${variantIndex + 1} of 5]`;
+  }
+
+  // ── WITHOUT reference image ──
+  return `Create a circular sticker design (5×5cm).
 
 ${themeLine}
 ${textLine}
 
-${richnessHint}
-${circleRule}
-Do not add any text other than what is specified above. Do not include human hands or body parts.
-
-[Creative variant ${variantIndex - 2 + 1} of 3]`;
-    }
-  }
-
-  // ── WITHOUT reference image: give more guidance since model has nothing to go on ──
-  let styleHint;
-  if (variantType === 'similar') {
-    styleHint = `Style: warm hand-painted illustration, vibrant saturated colors, premium print-quality feel. Variant ${variantIndex + 1} of 2.`;
-  } else {
-    styleHint = `Be creative and free with the style — surprise me. Make it beautiful and print-worthy.`;
-  }
-
-  return `Create a circular sticker design (5×5cm, print-ready).
-
-${themeLine}
-${textLine}
-${styleHint}
-
-${richnessHint}
+${printQuality}
 ${circleRule}
 - Do not add any text other than specified above
 - Do not include human hands or body parts
 
-[${variantType} #${variantIndex + 1}]`;
+[Variant ${variantIndex + 1} of 5]`;
 }
 
 async function callImageEdit(apiKey, imageB64, instruction) {

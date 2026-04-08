@@ -1400,8 +1400,8 @@ if (typeof mode === 'number') {
       pt.textContent=`正在生成第 ${i+1} 张${variantLabel}(${done+1}/${totalTasks})...`;
 
       try{
-        // 确定生成类型:相似(0-1) 或 创意(2-4)
-        const genType = variant < 2 ? 'similar' : 'creative';
+        // All variants are similar style
+        const genType = 'similar';
 
         // Bug3: 如果该行没有参考图,尝试共享同一主题组里其他行的参考图
         let sharedRefImg = c.referenceImageB64;
@@ -1446,9 +1446,7 @@ if (typeof mode === 'number') {
     // 标记完成
     if (c.generatedImages && c.generatedImages.length > 0) {
       c.status='done';
-      const similarCount = c.generatedImages.filter(img => img.type === 'similar').length;
-      const creativeCount = c.generatedImages.filter(img => img.type === 'creative').length;
-      setCardStatus(i,'done',`✅ ${similarCount}相似 + ${creativeCount}创意`);
+      setCardStatus(i,'done',`✅ ${c.generatedImages.length} 张已生成`);
     } else {
       c.status='error';
       setCardStatus(i,'error','❌ 生成失败');
