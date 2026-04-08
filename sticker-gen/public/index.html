@@ -617,7 +617,7 @@ function renderCards(){
   if(!cardStates.length){wrap.innerHTML='<div class="empty-hint">没有有效数据</div>';return;}
 
   // Determine grouping key:
-  // If no theme column — group by copywriting (text), regardless of whether embedded images exist
+  // If no theme column - group by copywriting (text), regardless of whether embedded images exist
   const hasAnyTheme = cardStates.some(c => c.theme && c.theme.trim());
   const groupByText = !hasAnyTheme;
 
@@ -1153,6 +1153,24 @@ function openSplitLayerModal(cardIdx, imgIdx) {
   const c = cardStates[cardIdx];
   if (!c.generatedImages || !c.generatedImages[imgIdx]) { showToast('请先生成图片', 'error'); return; }
   splitCardIdx = cardIdx; splitImgIdx = imgIdx;
+
+  const img = c.generatedImages[imgIdx];
+
+  // If already split, show results directly
+  if (img.splitBgUrl && img.splitTextUrl) {
+    splitBgUrl = img.splitBgUrl;
+    splitTextUrl = img.splitTextUrl;
+    document.getElementById('splitBgImg').src = splitBgUrl;
+    document.getElementById('splitTextImg').src = splitTextUrl;
+    document.getElementById('splitLayerStatus').style.display = 'none';
+    document.getElementById('splitLayerResult').style.display = 'block';
+    document.getElementById('splitLayerStartBtn').disabled = false;
+    document.getElementById('splitLayerStartBtn').textContent = '🔄 重新拆层';
+    document.getElementById('splitLayerModal').classList.add('show');
+    document.getElementById('splitLayerModal').onclick = function(e){ if(e.target===this) closeSplitLayerModal(); };
+    return;
+  }
+
   splitBgUrl = null; splitTextUrl = null;
   document.getElementById('splitLayerStatus').textContent = '点击「开始拆层」,AI 将分别生成背景图和文字图';
   document.getElementById('splitLayerStatus').style.display = 'block';
@@ -1189,8 +1207,8 @@ async function doSplitLayer() {
     return;
   }
 
-  // Step 1: Background (remove text)
-  statusEl.textContent = '⏳ 第 1/2 步:AI 去除文字,生成背景图...';
+  // Step 1: Background (remove text, leave blank/white areas)
+  statusEl.textContent = '⏳ 第 1/2 步:AI 去除文字，生成背景图...';
   let bgUrl;
   try {
     const bgResp = await fetch('/api/edit-image', {
@@ -1198,7 +1216,7 @@ async function doSplitLayer() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         imageB64: imgB64,
-        instruction: 'Remove all text and numbers from the sticker. Fill the text areas seamlessly with the surrounding background pattern, colors and decorations so no text is visible. Keep all non-text graphic elements intact. Output the same circular sticker without any text.',
+        instruction: 'Remove all text and numbers from this sticker. Leave the areas where text was as empty white space — do NOT fill them in with background patterns or colors. Keep all non-text graphic elements (illustrations, decorations, borders) exactly intact. Output the same circular sticker with blank white areas where the text used to be.',
         apiKey
       })
     });
@@ -1222,7 +1240,7 @@ async function doSplitLayer() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         imageB64: imgB64,
-        instruction: 'Extract ONLY the text/numbers from this sticker. Keep the text exactly as-is with original colors and positions. Place the text on a pure white (#ffffff) background - no decorative elements, no illustrations, no border, no gradients. Output just the text on plain white.',
+        instruction: 'Extract ONLY the text/numbers from this sticker onto a pure white (#ffffff) background. Reproduce the text with its EXACT original font style, font weight, lettering, color, size and position — label each text element with its font name if identifiable (e.g. write the font name in tiny gray text beneath each word). No illustrations, no decorations, no border, no gradients — just the text on white.',
         apiKey
       })
     });
@@ -1237,6 +1255,10 @@ async function doSplitLayer() {
     btn.disabled = false; btn.textContent = '✨ 重试';
     return;
   }
+
+  // Persist split results on the image object so re-opening modal shows them directly
+  const imgObj = cardStates[splitCardIdx]?.generatedImages?.[splitImgIdx];
+  if (imgObj) { imgObj.splitBgUrl = bgUrl; imgObj.splitTextUrl = textUrl; }
 
   // Show results
   document.getElementById('splitBgImg').src = bgUrl;
@@ -1378,10 +1400,10 @@ if (typeof mode === 'number') {
       pt.textContent=`正在生成第 ${i+1} 张${variantLabel}(${done+1}/${totalTasks})...`;
 
       try{
-        // 确定生成类型：相似(0-1) 或 创意(2-4)
+        // 确定生成类型:相似(0-1) 或 创意(2-4)
         const genType = variant < 2 ? 'similar' : 'creative';
 
-        // Bug3: 如果该行没有参考图，尝试共享同一主题组里其他行的参考图
+        // Bug3: 如果该行没有参考图,尝试共享同一主题组里其他行的参考图
         let sharedRefImg = c.referenceImageB64;
         if (!sharedRefImg) {
           const sameTheme = cardStates.find(other => other !== c && !!(other.referenceImageB64) && (other.theme || '未分组') === (c._groupKey || c.theme || '未分组'));
