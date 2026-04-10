@@ -221,6 +221,22 @@ app.post('/api/generate-variant', async (req, res) => {
   }
 });
 
+// ── Identify fonts in sticker image ────────────────────────────────────────────────────
+app.post('/api/identify-font', async (req, res) => {
+  const { imageB64, apiKey } = req.body;
+  const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
+  try {
+    const result = await callVisionText(effectiveKey, imageB64,
+      'Look at the text in this sticker image. Identify the font(s) used. Reply ONLY in this format: "Font: [font name(s)]". If multiple fonts, separate with commas. If unsure, suggest the closest known font family.');
+    // Extract the font name from the reply
+    const match = result.match(/Font:\s*(.+)/i);
+    const fonts = match ? match[1].trim() : result.trim();
+    res.json({ success: true, fonts });
+  } catch(e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 // ── Build prompt (now reference image drives style description) ───────────────
 app.post('/api/generate-prompt', (req, res) => {
   const { copywriting, theme, hasReferenceImg, insertedImageDesc } = req.body;
@@ -406,6 +422,40 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
         } catch (e) {
           reject(new Error('Parse error: ' + data.slice(0, 300)));
         }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// Vision model returning TEXT (not image) — used for font identification etc.
+async function callVisionText(apiKey, imageB64, prompt) {
+  return new Promise((resolve, reject) => {
+    const mime = imageB64.startsWith('data:') ? imageB64.split(';')[0].split(':')[1] : 'image/jpeg';
+    const b64data = imageB64.startsWith('data:') ? imageB64.split(',')[1] : imageB64;
+    const body = JSON.stringify({
+      model: 'gemini-3.1-flash-lite-preview',
+      messages: [{ role: 'user', content: [
+        { type: 'text', text: prompt },
+        { type: 'image_url', image_url: { url: `data:${mime};base64,${b64data}` } }
+      ]}]
+    });
+    const options = {
+      hostname: 'api.modelverse.cn', port: 443, path: '/v1/chat/completions', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Content-Length': Buffer.byteLength(body) }
+    };
+    let data = '';
+    const req = https.request(options, (response) => {
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.message?.content;
+          if (content) { resolve(typeof content === 'string' ? content.trim() : JSON.stringify(content)); return; }
+          reject(new Error('No text: ' + data.slice(0, 200)));
+        } catch (e) { reject(new Error('Parse: ' + data.slice(0, 200))); }
       });
     });
     req.on('error', reject);

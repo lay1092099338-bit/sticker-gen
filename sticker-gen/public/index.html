@@ -415,6 +415,7 @@ tr:hover td{background:var(--pink-light)}
           <div style="background:repeating-conic-gradient(#e5e7eb 0% 25%,white 0% 50%) 0 0/16px 16px;border-radius:12px;border:1px solid #e2e8f0;overflow:hidden">
             <img id="splitTextImg" src="" style="width:100%;display:block">
           </div>
+          <div id="splitFontInfo" style="display:none;margin-top:8px;font-size:12px;color:#6366f1;font-weight:600;background:#eef2ff;padding:6px 10px;border-radius:6px;text-align:left"></div>
           <button class="modal-btn" style="margin-top:10px;width:100%;background:#6366f1;color:white" onclick="splitDownload('text')">⬇️ 下载文字图</button>
         </div>
       </div>
@@ -1162,6 +1163,9 @@ function openSplitLayerModal(cardIdx, imgIdx) {
     splitTextUrl = img.splitTextUrl;
     document.getElementById('splitBgImg').src = splitBgUrl;
     document.getElementById('splitTextImg').src = splitTextUrl;
+    const fi = document.getElementById('splitFontInfo');
+    if (img.splitFontInfo) { fi.textContent = '文字字体：' + img.splitFontInfo; fi.style.display = 'block'; }
+    else fi.style.display = 'none';
     document.getElementById('splitLayerStatus').style.display = 'none';
     document.getElementById('splitLayerResult').style.display = 'block';
     document.getElementById('splitLayerStartBtn').disabled = false;
@@ -1172,6 +1176,7 @@ function openSplitLayerModal(cardIdx, imgIdx) {
   }
 
   splitBgUrl = null; splitTextUrl = null;
+  document.getElementById('splitFontInfo').style.display = 'none';
   document.getElementById('splitLayerStatus').textContent = '点击「开始拆层」,AI 将分别生成背景图和文字图';
   document.getElementById('splitLayerStatus').style.display = 'block';
   document.getElementById('splitLayerResult').style.display = 'none';
@@ -1240,7 +1245,7 @@ async function doSplitLayer() {
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({
         imageB64: imgB64,
-        instruction: 'Extract ONLY the text/numbers from this sticker onto a pure white (#ffffff) background. Reproduce the text with its EXACT original font style, font weight, lettering, color, size and position — label each text element with its font name if identifiable (e.g. write the font name in tiny gray text beneath each word). No illustrations, no decorations, no border, no gradients — just the text on white.',
+        instruction: 'Extract ONLY the text/numbers from this sticker onto a pure white (#ffffff) background. Reproduce the text with its EXACT original font style, font weight, lettering, color, size and position. No font labels, no annotations, no illustrations, no decorations, no border, no gradients — just the text on white.',
         apiKey
       })
     });
@@ -1256,13 +1261,31 @@ async function doSplitLayer() {
     return;
   }
 
+  // Step 3: Identify fonts via text API
+  statusEl.textContent = '⏳ 第 3/3 步:识别字体...';
+  let fontInfo = '识别中...';
+  try {
+    const fontResp = await fetch('/api/identify-font', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ imageB64: imgB64, apiKey })
+    });
+    const fontJson = await fontResp.json();
+    if (fontJson.success) fontInfo = fontJson.fonts || '未能识别';
+    else fontInfo = '未能识别';
+  } catch(e) {
+    fontInfo = '未能识别';
+  }
+
   // Persist split results on the image object so re-opening modal shows them directly
   const imgObj = cardStates[splitCardIdx]?.generatedImages?.[splitImgIdx];
-  if (imgObj) { imgObj.splitBgUrl = bgUrl; imgObj.splitTextUrl = textUrl; }
+  if (imgObj) { imgObj.splitBgUrl = bgUrl; imgObj.splitTextUrl = textUrl; imgObj.splitFontInfo = fontInfo; }
 
   // Show results
   document.getElementById('splitBgImg').src = bgUrl;
   document.getElementById('splitTextImg').src = textUrl;
+  document.getElementById('splitFontInfo').textContent = '文字字体：' + fontInfo;
+  document.getElementById('splitFontInfo').style.display = 'block';
   statusEl.style.display = 'none';
   document.getElementById('splitLayerResult').style.display = 'block';
   btn.disabled = false; btn.textContent = '🔄 重新拆层';
