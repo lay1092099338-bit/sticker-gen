@@ -321,7 +321,7 @@ tr:hover td{background:var(--pink-light)}
       </div>
       <div style="flex:1">
         <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-          <button class="modal-btn" style="padding:5px 14px;font-size:12px;background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff;flex-shrink:0" onclick="setAllEditInstructions()">⚡ 快捷指令</button>
+          <button class="modal-btn" style="padding:5px 14px;font-size:12px;background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff;flex-shrink:0" onclick="setAllEditInstructions()">🔄 重置指令</button>
           <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;flex-shrink:0" onclick="document.getElementById('imgEditInstruction').value='';document.getElementById('imgEditInstruction').focus()">🗑️ 清空</button>
           <span style="font-size:11px;color:#94a3b8">点击快捷指令可一键填入所有功能</span>
         </div>
@@ -332,7 +332,7 @@ tr:hover td{background:var(--pink-light)}
         <div class="font-select-area">
           <div class="modal-label">🔤 换字体 <span style="font-size:11px;color:#94a3b8;font-weight:400;text-transform:none">(可选，不选则不改字体)</span></div>
           <div class="font-dropdown" id="fontDropdown">
-            <div class="font-dropdown-trigger" id="fontDropdownTrigger" onclick="toggleFontDropdown()">
+            <div class="font-dropdown-trigger" id="fontDropdownTrigger" onclick="toggleFontDropdown(event)">
               <span class="fd-selected" id="fdSelectedLabel" style="font-family:inherit;font-size:13px;color:#94a3b8">— 不换字体 —</span>
               <span class="fd-arrow">▼</span>
             </div>
@@ -1594,15 +1594,18 @@ function initFontDropdown() {
     }
     list.appendChild(item);
   });
-  // 点击外部关闭
-  document.addEventListener('click', (e) => {
-    if (!document.getElementById('fontDropdown').contains(e.target)) {
+  // 点击外部关闭（用 mousedown 避免和 toggle click 冲突）
+  document.addEventListener('mousedown', (e) => {
+    const dd = document.getElementById('fontDropdown');
+    const list = document.getElementById('fontDropdownList');
+    if (dd && !dd.contains(e.target) && list && !list.contains(e.target)) {
       closeFontDropdown();
     }
   });
 }
 
-function toggleFontDropdown() {
+function toggleFontDropdown(e) {
+  if (e) e.stopPropagation();
   initFontDropdown();
   const trigger = document.getElementById('fontDropdownTrigger');
   const list = document.getElementById('fontDropdownList');
@@ -1686,12 +1689,12 @@ function openImgEditModal(cardIdx, imgIdx, copywriting) {
   imgEditImgIndex = imgIdx;
   const img = c.generatedImages[imgIdx];
   document.getElementById('imgEditPreview').src = img.url;
-  // Pre-fill with text change template if copywriting is provided
-  if (copywriting) {
-    document.getElementById('imgEditInstruction').value = `把图中的文字改成"${copywriting}"`;
-  } else {
-    document.getElementById('imgEditInstruction').value = '';
-  }
+  // 直接填入4行模板，文字回显原文案
+  const _copy = copywriting || '';
+  document.getElementById('imgEditInstruction').value = `把图中的文字改成"${_copy}"
+把中间的主图换成:
+把图案围的装饰小元素换成:
+调整文字和主图的位置:`;
   // 重置字体下拉
   resetFontDropdown();
   document.getElementById('imgEditLoading').style.display = 'none';
