@@ -1594,8 +1594,8 @@ function initFontDropdown() {
     }
     list.appendChild(item);
   });
-  // 点击外部关闭（用 mousedown 避免和 toggle click 冲突）
-  document.addEventListener('mousedown', (e) => {
+  // 点击外部关闭：延迟一帧执行，避免和 trigger 的 click 冲突
+  document.addEventListener('click', (e) => {
     const dd = document.getElementById('fontDropdown');
     const list = document.getElementById('fontDropdownList');
     if (dd && !dd.contains(e.target) && list && !list.contains(e.target)) {
@@ -1605,7 +1605,7 @@ function initFontDropdown() {
 }
 
 function toggleFontDropdown(e) {
-  if (e) e.stopPropagation();
+  e.stopPropagation(); // 阻止冒泡到 document，防止"外部关闭"监听器立即关掉
   initFontDropdown();
   const trigger = document.getElementById('fontDropdownTrigger');
   const list = document.getElementById('fontDropdownList');
@@ -1613,7 +1613,6 @@ function toggleFontDropdown(e) {
   if (isOpen) {
     closeFontDropdown();
   } else {
-    // 用 fixed 定位跟随触发器，彻底脱离 overflow 限制
     const rect = trigger.getBoundingClientRect();
     list.style.top = (rect.bottom + 4) + 'px';
     list.style.left = rect.left + 'px';
