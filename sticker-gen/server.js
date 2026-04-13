@@ -232,9 +232,10 @@ app.post('/api/swap-element', async (req, res) => {
     const prompt = `This is a sticker image. The user clicked at approximately (${Math.round(clickX * 100)}%, ${Math.round(clickY * 100)}%) of the image (measured from top-left corner).
 
 Please:
-1. Identify what visual element is located at that click position
-2. Replace ALL instances of that same element with a visually distinct version — keep the same illustration style and overall aesthetic of the sticker, but make the new element look noticeably different: different shape details, different pose or angle, different internal pattern or texture, different level of detail. It should be clearly a new drawing, not just a minor tweak.
-3. Keep everything else completely unchanged: layout, colors, text, other decorative elements, background, composition.
+1. Identify what visual element is located at that click position (e.g. "rose", "lemon", "branch")
+2. Replace ALL instances of that same element with a different variety or species of the same category — for example: rose -> daisy or sunflower, lemon -> lime or orange slice, cherry -> strawberry. The new element must have a clearly different silhouette and shape so the swap is obvious at a glance.
+3. IMPORTANT: Keep the exact same color palette — do not change any colors. Only the shape/illustration of the element changes.
+4. Keep everything else completely unchanged: layout, text, other decorative elements, background, composition, illustration style.
 
 Return the modified image.`;
 
@@ -316,11 +317,15 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 
   const circleRule = 'The circular sticker must fill the ENTIRE square canvas from edge to edge, the circle diameter equals the canvas width. The four corners show transparent background. No padding, no margin.';
 
-  // 5张各有明确风格定位
-  // 0,1: 直接相似（高度忠实参考图）
-  // 2: 相似变体（微调色调/细节）
-  // 3: 换配色和图案（主色调完全不同）
-  // 4: 创意发散
+  // 第5张随机抽风格
+  const creativeStyles = [
+    'Japanese kawaii style: soft rounded shapes, cute proportions, pastel-friendly, charming and sweet aesthetic',
+    'Pop art style: bold black outlines, flat graphic color blocks, strong contrast, graphic and punchy',
+    'Watercolor hand-painted style: soft edges, painterly brushstrokes, gentle color bleeds, organic and artistic feel',
+    'Cartoon style: clean expressive linework, bold shapes, slightly exaggerated proportions, fun and lively'
+  ];
+  const pickedStyle = creativeStyles[Math.floor(Math.random() * creativeStyles.length)];
+
   const variantStrategies = [
     {
       label: 'Faithful Similar A',
@@ -339,20 +344,19 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
       hint: 'Use a completely different color palette (e.g. if original is warm yellow/green, switch to cool blue/purple or bold red/orange). Redesign the decorative pattern arrangement to match the new palette. The theme and text stay the same but the visual mood should feel distinctly different.'
     },
     {
-      label: 'Creative Exploration',
-      hint: 'Take creative liberties while keeping the core theme. Change the illustration style (e.g. from realistic to flat/geometric, or from clean to hand-drawn), reorganize the composition boldly, introduce unexpected complementary elements, or apply an unconventional color treatment. The result should feel like a bold, imaginative interpretation, not just a tweak.'
+      label: 'Creative Style Exploration',
+      hint: `Reimagine the sticker in this specific style: ${pickedStyle}. Keep the same theme and text, but fully commit to this new visual style. The result should feel like a genuinely different design direction, not just a color swap.`
     }
   ];
 
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
-  // WITH reference image
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
     return `Look at the reference image. Create a circular sticker based on it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\nDo not add any text other than what is specified above. Do not include human hands or body parts.\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
 
-  // WITHOUT reference image
   return `Create a circular sticker design (5x5cm).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+}
 }
 async function callImageEdit(apiKey, imageB64, instruction) {
   // Use Gemini 3 Pro via chat/completions (same as callModelverse)
