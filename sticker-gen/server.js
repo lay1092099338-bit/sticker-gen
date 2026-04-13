@@ -556,7 +556,7 @@ async function searchUnsplash(query) {
   });
 }
 
-const PORT = 7788;
+const PORT = process.env.PORT || 7788;
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Sticker Generator running on http://0.0.0.0:${PORT}`);
 });

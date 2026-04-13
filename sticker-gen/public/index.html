@@ -130,6 +130,9 @@ tr:hover td{background:var(--pink-light)}
 .modal-btn-primary:hover:not(:disabled){transform:translateY(-1px)}
 .modal-refining{font-size:12px;color:var(--text-light);text-align:center;padding:8px;display:none}
 .modal-refining.show{display:block}
+.font-select-area{border-top:1px solid #f1f5f9;margin-top:12px;padding-top:10px}
+.font-select-area select{width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;font-family:inherit}
+#fontPreviewArea{margin-top:8px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:26px;color:#1e293b;min-height:46px;line-height:1.4;word-break:break-word}
 
 /* IMAGE SEARCH MODAL */
 .img-search-bar{display:flex;gap:8px;margin-bottom:12px}
@@ -315,6 +318,14 @@ tr:hover td{background:var(--pink-light)}
         <div class="modal-label">修改指令</div>
         <textarea class="modal-instruction" id="imgEditInstruction" rows="4" placeholder="描述你想改什么..."></textarea>
         <div style="font-size:11px;color:#9ca3af;margin-top:4px">💡 中文或英文均可</div>
+        <!-- 换字体区 -->
+        <div class="font-select-area">
+          <div class="modal-label">🔤 换字体 <span style="font-size:11px;color:#94a3b8;font-weight:400;text-transform:none">(可选，不选则不改字体)</span></div>
+          <select id="fontSelector" onchange="onFontSelect()">
+            <option value="">— 不换字体 —</option>
+          </select>
+          <div id="fontPreviewArea" style="display:none"></div>
+        </div>
       </div>
     </div>
     <div class="modal-refining" id="imgEditLoading" style="display:none">⏳ AI 正在编辑图片,请稍候...</div>
@@ -1504,6 +1515,79 @@ document.getElementById('editModal').addEventListener('click',function(e){if(e.t
 let imgEditCardIndex = -1;
 let imgEditImgIndex = -1;
 
+// ── 字体功能 ──────────────────────────────────────────────────────────
+const FONT_LIST = [
+  // 手写/Script
+  '── 手写体 ──','Dancing Script','Pacifico','Great Vibes','Satisfy','Allura','Alex Brush',
+  'Pinyon Script','Sacramento','Petit Formal Script','Tangerine','Italianno',
+  'Lovers Quarrel','Kaushan Script','Yellowtail','Cookie','Lobster','Courgette',
+  'Cedarville Cursive','Herr Von Muellerhoff','Monsieur La Doulaise',
+  'Mrs Saint Delafield','Ruthie','Engagement','Euphoria Script','Clicker Script',
+  'Bad Script','Arizonia','Berkshire Swash','Bilbo','Bilbo Swash Caps',
+  'Butterfly Kids','Calligraffitti','Dawning of a New Day',
+  'Eagle Lake','Felipa','Fleur De Leah','Fondamento','Gwendolyn','Ingrid Darling',
+  'Island Moments','Jim Nightshade','Just Another Hand','Kristi','La Belle Aurore',
+  'Luxurious Script','Marck Script','Meddon','Miss Fajardose',
+  'Ms Madi','Nanum Pen Script','Niconne','Nothing You Could Do',
+  'Norican','Over the Rainbow','Parisienne','Princess Sofia','Qwigley',
+  'Quintessential','Rancho','Redressed','Rouge Script','Ruge Boogie','Sail',
+  'Seaweed Script','Stalemate','Sue Ellen Francisco','Swanky and Moo Moo',
+  'The Girl Next Door','Vibur','Water Brush','Whisper',
+  // 装饰体/Display
+  '── 装饰体 ──','Abril Fatface','Alfa Slab One','Bangers','Boogaloo',
+  'Bree Serif','Cabin Sketch','Carter One','Chewy','Cinzel','Cinzel Decorative',
+  'Creepster','Dela Gothic One','Emblema One','Fascinate','Finger Paint','Fjalla One',
+  'Fontdiner Swanky','Forum','Fredoka One','Fugaz One','Galada',
+  'Girassol','Gravitas One','Hanalei Fill','Irish Grover','Italiana',
+  'Jacques Francois Shadow','Josefin Slab','Kavoon','Kranky','Lancelot',
+  'Leckerli One','Life Savers','Lilita One','Limelight','Lobster Two',
+  'Londrina Shadow','Londrina Solid','Love Ya Like A Sister','Loved by the King',
+  'Macondo','Maiden Orange','Marcellus','Marcellus SC','Marko One',
+  'Permanent Marker','Righteous','Russo One','Shrikhand','Sigmar One',
+  'Squada One','Titan One','Vampiro One','Vast Shadow','Yeseva One'
+];
+
+function loadGoogleFont(family) {
+  const id = 'gf-' + family.replace(/\s+/g, '-');
+  if (!document.getElementById(id)) {
+    const link = document.createElement('link');
+    link.id = id;
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=' + family.replace(/ /g, '+') + ':wght@400;700&display=swap';
+    document.head.appendChild(link);
+  }
+}
+
+function initFontSelector() {
+  const sel = document.getElementById('fontSelector');
+  if (sel.options.length > 1) return;
+  FONT_LIST.forEach(f => {
+    const opt = document.createElement('option');
+    if (f.startsWith('──')) {
+      opt.disabled = true;
+      opt.value = '';
+      opt.textContent = f;
+    } else {
+      opt.value = f;
+      opt.textContent = f;
+    }
+    sel.appendChild(opt);
+  });
+}
+
+function onFontSelect() {
+  const sel = document.getElementById('fontSelector');
+  const preview = document.getElementById('fontPreviewArea');
+  const family = sel.value;
+  if (!family) { preview.style.display = 'none'; return; }
+  loadGoogleFont(family);
+  const text = (imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex]?.copywriting : '') || 'Preview Text';
+  preview.style.fontFamily = "'" + family + "', cursive, serif";
+  preview.textContent = text;
+  preview.style.display = 'block';
+}
+
+
 function setEditInstruction(type) {
   const c = imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex] : null;
   const text = c?.copywriting || '';
@@ -1546,6 +1630,10 @@ function openImgEditModal(cardIdx, imgIdx, copywriting) {
   } else {
     document.getElementById('imgEditInstruction').value = '';
   }
+  // 重置字体选择器
+  initFontSelector();
+  document.getElementById('fontSelector').value = '';
+  document.getElementById('fontPreviewArea').style.display = 'none';
   document.getElementById('imgEditLoading').style.display = 'none';
   document.getElementById('btnImgEdit').disabled = false;
   document.getElementById('imgEditModal').classList.add('show');
@@ -1568,8 +1656,13 @@ async function runImgEdit() {
   const i = imgEditCardIndex;
   const idx = imgEditImgIndex;
   if (i < 0 || idx < 0) return;
-  const instruction = document.getElementById('imgEditInstruction').value.trim();
-  if (!instruction) { showToast('请输入修改指令', 'error'); return; }
+  let instruction = document.getElementById('imgEditInstruction').value.trim();
+  const selectedFont = document.getElementById('fontSelector').value;
+  if (selectedFont) {
+    const fontAppend = 'Change all text in the image to use ' + selectedFont + ' font style';
+    instruction = instruction ? instruction + ', ' + fontAppend : fontAppend;
+  }
+  if (!instruction) { showToast('请输入指令或选择字体', 'error'); return; }
   const c = cardStates[i];
   const origImg = c.generatedImages[idx];
   const apiKey = document.getElementById('apiKey').value.trim();
