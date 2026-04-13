@@ -336,7 +336,6 @@ tr:hover td{background:var(--pink-light)}
               <span class="fd-selected" id="fdSelectedLabel" style="font-family:inherit;font-size:13px;color:#94a3b8">— 不换字体 —</span>
               <span class="fd-arrow">▼</span>
             </div>
-            <div class="font-dropdown-list" id="fontDropdownList"></div>
           </div>
           <div id="fontPreviewArea" style="display:none"></div>
         </div>
@@ -2104,5 +2103,7 @@ function showToast(msg,type){
   toastTimer=setTimeout(()=>t.classList.remove('show'),3500);
 }
 </script>
+<!-- 字体下拉列表：挂在 body 下，fixed 定位不受 modal transform 影响 -->
+<div class="font-dropdown-list" id="fontDropdownList"></div>
 </body>
 </html>
