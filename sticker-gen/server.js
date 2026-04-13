@@ -357,7 +357,6 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
 
   return `Create a circular sticker design (5x5cm).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
-}
 async function callImageEdit(apiKey, imageB64, instruction) {
   // Use Gemini 3 Pro via chat/completions (same as callModelverse)
   return callModelverse(apiKey, instruction, imageB64, null);
