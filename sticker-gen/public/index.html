@@ -1659,9 +1659,14 @@ function setAllEditInstructions() {
   const c = imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex] : null;
   const text = c?.copywriting || '';
   const ta = document.getElementById('imgEditInstruction');
-  ta.value = `把图中的文字改成"${text}",把中间的主图换成:,把图案围的装饰小元素换成:,调整文字和主图的位置:`;
+  ta.value = `把图中的文字改成"${text}"
+把中间的主图换成:
+把图案围的装饰小元素换成:
+调整文字和主图的位置:`;
   ta.focus();
-  ta.selectionStart = ta.selectionEnd = ta.value.length;
+  // 把光标定位到第一行文字内容的末尾（引号前），方便直接编辑
+  const firstLineEnd = ta.value.indexOf('\n');
+  ta.selectionStart = ta.selectionEnd = firstLineEnd > 0 ? firstLineEnd : ta.value.length;
 }
 
 function setEditInstruction(type) {
@@ -1706,7 +1711,16 @@ async function runImgEdit() {
   const i = imgEditCardIndex;
   const idx = imgEditImgIndex;
   if (i < 0 || idx < 0) return;
-  let instruction = document.getElementById('imgEditInstruction').value.trim();
+  // 过滤掉用户没有填写内容的模板行（以 ":" 结尾且冒号后无内容的行）
+  const rawInstruction = document.getElementById('imgEditInstruction').value;
+  const filteredLines = rawInstruction.split('\n').filter(line => {
+    const t = line.trim();
+    if (!t) return false;
+    // 模板空行：以冒号结尾，说明用户没填内容
+    if (/[:：]\s*$/.test(t)) return false;
+    return true;
+  });
+  let instruction = filteredLines.join(', ').trim();
   const selectedFont = _selectedFont;
   if (selectedFont) {
     const fontAppend = 'Change all text in the image to use ' + selectedFont + ' font style';
