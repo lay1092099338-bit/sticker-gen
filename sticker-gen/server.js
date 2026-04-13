@@ -221,6 +221,30 @@ app.post('/api/generate-variant', async (req, res) => {
   }
 });
 
+// ── Swap element by click position ────────────────────────────────────────────
+app.post('/api/swap-element', async (req, res) => {
+  const { imageB64, clickX, clickY, apiKey } = req.body;
+  const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
+  if (!imageB64 || clickX == null || clickY == null) {
+    return res.status(400).json({ success: false, error: 'Missing imageB64 or click coordinates' });
+  }
+  try {
+    const prompt = `This is a sticker image. The user clicked at approximately (${Math.round(clickX * 100)}%, ${Math.round(clickY * 100)}%) of the image (measured from top-left corner).
+
+Please:
+1. Identify what visual element is located at that click position
+2. Replace ALL instances of that same element in the image with a different but similar style version (e.g. if it's a lemon, replace all lemons with differently styled lemons)
+3. Keep everything else completely unchanged: layout, colors, text, other decorative elements, overall style and composition
+
+Return the modified image.`;
+
+    const result = await callImageEdit(effectiveKey, imageB64, prompt);
+    res.json({ success: true, imageUrl: result });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // ── Identify fonts in sticker image ────────────────────────────────────────────────────
 app.post('/api/identify-font', async (req, res) => {
   const { imageB64, apiKey } = req.body;

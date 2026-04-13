@@ -41,21 +41,23 @@ tr:hover td{background:var(--pink-light)}
 .theme-group-meta{font-size:12px;color:var(--text-light)}
 .theme-group-body{padding:16px 20px 20px}
 .image-strip{display:flex;gap:14px;flex-wrap:wrap}
-.strip-item{position:relative;width:200px;height:200px;flex-shrink:0;border-radius:12px;overflow:hidden;cursor:pointer;border:2px solid var(--border);transition:border-color .2s,box-shadow .2s}
+.strip-item{position:relative;width:200px;flex-shrink:0;border-radius:12px;overflow:visible;cursor:default;border:2px solid var(--border);transition:border-color .2s,box-shadow .2s;display:flex;flex-direction:column}
 .strip-item:hover{border-color:var(--pink);box-shadow:0 4px 20px rgba(244,114,182,.3)}
 .strip-item.active{border-color:var(--pink-dark);box-shadow:0 0 0 3px var(--pink)}
-.strip-item img{width:100%;height:100%;object-fit:cover;display:block}
-.strip-item.generating-placeholder{background:linear-gradient(135deg,#fce7f3,#ede9fe);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:default}
-.strip-item.preview-placeholder{background:linear-gradient(135deg,#fff5f9,#f3e8ff);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-style:dashed}
+.strip-item-img-wrap{position:relative;width:100%;height:200px;border-radius:10px 10px 0 0;overflow:hidden;flex-shrink:0}
+.strip-item-img-wrap img{width:100%;height:100%;object-fit:cover;display:block;cursor:crosshair}
+.strip-item-img-wrap.swapping{pointer-events:none}
+.strip-item-img-wrap.swapping::after{content:"🔄 识别替换中...";position:absolute;inset:0;background:rgba(0,0,0,.55);color:white;font-size:13px;display:flex;align-items:center;justify-content:center;display:flex}
+.strip-item.generating-placeholder{background:linear-gradient(135deg,#fce7f3,#ede9fe);height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:default;border-radius:12px}
+.strip-item.preview-placeholder{background:linear-gradient(135deg,#fff5f9,#f3e8ff);height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-style:dashed;border-radius:12px}
 .strip-item.preview-placeholder:hover{border-color:var(--pink);background:linear-gradient(135deg,#fce7f3,#ede9fe)}
 .preview-emoji{font-size:36px;line-height:1}
 .preview-copy{font-size:11px;color:var(--text-light);text-align:center;padding:0 8px;line-height:1.4;max-width:100%;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .preview-hint{font-size:10px;color:#c4b5fd;margin-top:2px}
-.strip-overlay{position:absolute;inset:0;background:rgba(0,0,0,.48);display:flex;align-items:center;justify-content:center;gap:10px;opacity:0;transition:opacity .18s}
-.strip-item:hover .strip-overlay{opacity:1}
-.strip-icon-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.93);border:none;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,background .15s;box-shadow:0 2px 8px rgba(0,0,0,.25)}
-.strip-icon-btn:hover{transform:scale(1.18);background:white}
-.strip-type-badge{position:absolute;bottom:6px;right:6px;font-size:10px;padding:2px 8px;border-radius:20px;color:white;pointer-events:none;font-weight:600}
+.strip-toolbar{display:flex;align-items:center;justify-content:space-around;padding:6px 4px;background:#fff;border-top:1px solid #f1f5f9;border-radius:0 0 10px 10px}
+.strip-icon-btn{width:34px;height:34px;border-radius:50%;background:#f8fafc;border:none;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,background .15s}
+.strip-icon-btn:hover{transform:scale(1.18);background:#f3e8ff}
+.strip-type-badge{position:absolute;top:6px;right:6px;font-size:10px;padding:2px 8px;border-radius:20px;color:white;pointer-events:none;font-weight:600}
 .hdr-btn{padding:5px 14px;border-radius:20px;border:none;font-size:12px;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
 .hdr-btn-ai{background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff}
 .hdr-btn-ai:hover{background:#e9d5ff}
@@ -877,19 +879,80 @@ function renderThemeStrip(theme) {
       const isActive = img.url === c.imageDataUrl;
       const badgeBg = img.type==='edited'?'#7c3aed':img.type==='similar'?'#be185d':'#059669';
       items.push(`<div class="strip-item${isActive?' active':''}" title="${label}">
-        <img src="${img.url}" alt="${label}" onclick="selectStripImg(${i},${idx})">
-        <div class="strip-type-badge" style="background:${badgeBg}">${typeLabel}</div>
-        <div class="strip-overlay">
-          <button class="strip-icon-btn" onclick="event.stopPropagation();openImgEditModal(${i},${idx},cardStates[${i}].copywriting)" title="AI编辑">🖌️</button>
-          <button class="strip-icon-btn" onclick="event.stopPropagation();openEditModalForImg(${i})" title="调整Prompt">✏️</button>
-          <button class="strip-icon-btn" onclick="event.stopPropagation();downloadStripImg(${i},${idx})" title="导出">⬇️</button>
-          <button class="strip-icon-btn" onclick="event.stopPropagation();openBatchNumModal(${i},${idx})" title="批量换数字">🔢</button>
-          <button class="strip-icon-btn" onclick="event.stopPropagation();openSplitLayerModal(${i},${idx})" title="拆分图层">✂️</button>
+        <div class="strip-item-img-wrap" id="imgwrap-${i}-${idx}">
+          <img src="${img.url}" alt="${label}"
+            onclick="handleStripImgClick(event,${i},${idx})"
+            title="点击图片任意位置识别并替换该元素">
+          <div class="strip-type-badge" style="background:${badgeBg}">${typeLabel}</div>
+        </div>
+        <div class="strip-toolbar">
+          <button class="strip-icon-btn" onclick="selectStripImg(${i},${idx})" title="设为主图">⭐</button>
+          <button class="strip-icon-btn" onclick="openImgEditModal(${i},${idx},cardStates[${i}].copywriting)" title="AI编辑">🖌️</button>
+          <button class="strip-icon-btn" onclick="openEditModalForImg(${i})" title="调整Prompt">✏️</button>
+          <button class="strip-icon-btn" onclick="downloadStripImg(${i},${idx})" title="导出">⬇️</button>
+          <button class="strip-icon-btn" onclick="openBatchNumModal(${i},${idx})" title="批量换数字">🔢</button>
+          <button class="strip-icon-btn" onclick="openSplitLayerModal(${i},${idx})" title="拆分图层">✂️</button>
         </div>
       </div>`);
     });
   });
   strip.innerHTML = items.length ? items.join('') : '';
+}
+
+async function handleStripImgClick(e, cardIdx, imgIdx) {
+  e.stopPropagation();
+  const c = cardStates[cardIdx];
+  if (!c.generatedImages || !c.generatedImages[imgIdx]) return;
+
+  const img = c.generatedImages[imgIdx];
+  const imgEl = e.currentTarget;
+  const wrap = document.getElementById('imgwrap-' + cardIdx + '-' + imgIdx);
+
+  // 计算点击位置的百分比坐标
+  const rect = imgEl.getBoundingClientRect();
+  const clickX = (e.clientX - rect.left) / rect.width;
+  const clickY = (e.clientY - rect.top) / rect.height;
+
+  // 获取图片 base64
+  let imageB64 = img.url;
+  if (imageB64.startsWith('http')) {
+    // 需要先 fetch 转 base64
+    try {
+      const resp = await fetch('/api/fetch-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: imageB64 })
+      });
+      const data = await resp.json();
+      if (data.success) imageB64 = data.data;
+    } catch(err) {
+      showToast('图片加载失败', 'error'); return;
+    }
+  }
+
+  // 显示 loading
+  wrap.classList.add('swapping');
+
+  const apiKey = document.getElementById('apiKey').value.trim();
+  try {
+    const resp = await fetch('/api/swap-element', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageB64, clickX, clickY, apiKey })
+    });
+    const data = await resp.json();
+    if (!data.success) throw new Error(data.error || '替换失败');
+
+    // 追加新图到 generatedImages
+    c.generatedImages.push({ url: data.imageUrl, type: 'edited' });
+    c.imageDataUrl = data.imageUrl;
+    showToast('元素替换成功 ✨', 'success');
+    renderThemeStrip(c._groupKey || c.theme || '未分组');
+  } catch(err) {
+    showToast('替换失败: ' + err.message, 'error');
+  } finally {
+    wrap.classList.remove('swapping');
+  }
 }
 
 function selectStripImg(i, idx) {
