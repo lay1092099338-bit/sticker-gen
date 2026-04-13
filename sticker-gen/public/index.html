@@ -131,7 +131,20 @@ tr:hover td{background:var(--pink-light)}
 .modal-refining{font-size:12px;color:var(--text-light);text-align:center;padding:8px;display:none}
 .modal-refining.show{display:block}
 .font-select-area{border-top:1px solid #f1f5f9;margin-top:12px;padding-top:10px}
-.font-select-area select{width:100%;padding:7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;font-family:inherit}
+/* 自定义字体下拉 */
+.font-dropdown{position:relative;width:100%}
+.font-dropdown-trigger{width:100%;padding:7px 32px 7px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#374151;background:#fff;cursor:pointer;text-align:left;display:flex;align-items:center;justify-content:space-between;gap:8px;user-select:none}
+.font-dropdown-trigger:hover{border-color:#c084fc}
+.font-dropdown-trigger .fd-arrow{font-size:10px;color:#94a3b8;flex-shrink:0;transition:transform .2s}
+.font-dropdown-trigger.open .fd-arrow{transform:rotate(180deg)}
+.font-dropdown-trigger .fd-selected{font-size:18px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.font-dropdown-list{position:absolute;z-index:2000;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,.12);max-height:280px;overflow-y:auto;display:none}
+.font-dropdown-list.open{display:block}
+.font-dropdown-item{padding:8px 12px;cursor:pointer;font-size:20px;line-height:1.3;color:#1e293b;border-bottom:1px solid #f8fafc;transition:background .1s}
+.font-dropdown-item:hover{background:#f3e8ff}
+.font-dropdown-item.selected{background:#f3e8ff;color:#7c3aed}
+.font-dropdown-item.group-label{font-size:11px;color:#94a3b8;font-weight:700;letter-spacing:.5px;padding:8px 12px 4px;cursor:default;background:#fafafa;font-family:'Segoe UI',sans-serif!important}
+.font-dropdown-item.group-label:hover{background:#fafafa}
 #fontPreviewArea{margin-top:8px;padding:12px 14px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;font-size:26px;color:#1e293b;min-height:46px;line-height:1.4;word-break:break-word}
 
 /* IMAGE SEARCH MODAL */
@@ -307,13 +320,10 @@ tr:hover td{background:var(--pink-light)}
         <img id="imgEditPreview" style="width:110px;height:110px;border-radius:50%;object-fit:cover;border:2.5px solid #e9d5ff" src="" alt="preview">
       </div>
       <div style="flex:1">
-        <div class="modal-label">快捷指令 <span style="font-size:11px;color:#94a3b8;font-weight:400">(点击追加,可多选组合)</span></div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
-          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff" onclick="setEditInstruction('text')">✏️ 换文字</button>
-          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#fce7f3;color:#be185d;border:1.5px solid #fbc4d9" onclick="setEditInstruction('main')">🎨 换主图</button>
-          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f0fdf4;color:#166534;border:1.5px solid #bbf7d0" onclick="setEditInstruction('deco')">✨ 换装饰</button>
-          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#fff7ed;color:#c2410c;border:1.5px solid #fed7aa" onclick="setEditInstruction('layout')">🔀 换布局</button>
-          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0" onclick="document.getElementById('imgEditInstruction').value='';document.getElementById('imgEditInstruction').focus()">🗑️ 清空</button>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+          <button class="modal-btn" style="padding:5px 14px;font-size:12px;background:#f3e8ff;color:#7c3aed;border:1.5px solid #e9d5ff;flex-shrink:0" onclick="setAllEditInstructions()">⚡ 快捷指令</button>
+          <button class="modal-btn" style="padding:5px 12px;font-size:12px;background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;flex-shrink:0" onclick="document.getElementById('imgEditInstruction').value='';document.getElementById('imgEditInstruction').focus()">🗑️ 清空</button>
+          <span style="font-size:11px;color:#94a3b8">点击快捷指令可一键填入所有功能</span>
         </div>
         <div class="modal-label">修改指令</div>
         <textarea class="modal-instruction" id="imgEditInstruction" rows="4" placeholder="描述你想改什么..."></textarea>
@@ -321,9 +331,13 @@ tr:hover td{background:var(--pink-light)}
         <!-- 换字体区 -->
         <div class="font-select-area">
           <div class="modal-label">🔤 换字体 <span style="font-size:11px;color:#94a3b8;font-weight:400;text-transform:none">(可选，不选则不改字体)</span></div>
-          <select id="fontSelector" onchange="onFontSelect()">
-            <option value="">— 不换字体 —</option>
-          </select>
+          <div class="font-dropdown" id="fontDropdown">
+            <div class="font-dropdown-trigger" id="fontDropdownTrigger" onclick="toggleFontDropdown()">
+              <span class="fd-selected" id="fdSelectedLabel" style="font-family:inherit;font-size:13px;color:#94a3b8">— 不换字体 —</span>
+              <span class="fd-arrow">▼</span>
+            </div>
+            <div class="font-dropdown-list" id="fontDropdownList"></div>
+          </div>
           <div id="fontPreviewArea" style="display:none"></div>
         </div>
       </div>
@@ -1558,63 +1572,101 @@ function loadGoogleFont(family) {
   }
 }
 
-function initFontSelector() {
-  const sel = document.getElementById('fontSelector');
-  if (sel.options.length > 1) return;
+// 自定义字体下拉
+let _fontDropdownInited = false;
+let _selectedFont = '';
+
+function initFontDropdown() {
+  if (_fontDropdownInited) return;
+  _fontDropdownInited = true;
+  const list = document.getElementById('fontDropdownList');
   FONT_LIST.forEach(f => {
-    const opt = document.createElement('option');
+    const item = document.createElement('div');
     if (f.startsWith('──')) {
-      opt.disabled = true;
-      opt.value = '';
-      opt.textContent = f;
+      item.className = 'font-dropdown-item group-label';
+      item.textContent = f.replace(/^──\s*/, '').replace(/\s*──$/, '');
     } else {
-      opt.value = f;
-      opt.textContent = f;
+      item.className = 'font-dropdown-item';
+      item.textContent = f;
+      item.style.fontFamily = "'" + f + "', cursive, serif";
+      loadGoogleFont(f); // 预加载所有字体（异步，不阻塞）
+      item.addEventListener('click', () => selectFont(f));
     }
-    sel.appendChild(opt);
+    list.appendChild(item);
+  });
+  // 点击外部关闭
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('fontDropdown').contains(e.target)) {
+      closeFontDropdown();
+    }
   });
 }
 
-function onFontSelect() {
-  const sel = document.getElementById('fontSelector');
+function toggleFontDropdown() {
+  initFontDropdown();
+  const trigger = document.getElementById('fontDropdownTrigger');
+  const list = document.getElementById('fontDropdownList');
+  const isOpen = list.classList.contains('open');
+  if (isOpen) {
+    closeFontDropdown();
+  } else {
+    trigger.classList.add('open');
+    list.classList.add('open');
+  }
+}
+
+function closeFontDropdown() {
+  document.getElementById('fontDropdownTrigger').classList.remove('open');
+  document.getElementById('fontDropdownList').classList.remove('open');
+}
+
+function selectFont(family) {
+  _selectedFont = family;
+  closeFontDropdown();
+  // 更新触发器显示
+  const label = document.getElementById('fdSelectedLabel');
+  label.textContent = family;
+  label.style.fontFamily = "'" + family + "', cursive, serif";
+  label.style.color = '#1e293b';
+  label.style.fontSize = '18px';
+  // 高亮选中项
+  document.querySelectorAll('.font-dropdown-item').forEach(el => {
+    el.classList.toggle('selected', el.textContent === family);
+  });
+  // 更新大预览
   const preview = document.getElementById('fontPreviewArea');
-  const family = sel.value;
-  if (!family) { preview.style.display = 'none'; return; }
-  loadGoogleFont(family);
   const text = (imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex]?.copywriting : '') || 'Preview Text';
   preview.style.fontFamily = "'" + family + "', cursive, serif";
   preview.textContent = text;
   preview.style.display = 'block';
 }
 
+function resetFontDropdown() {
+  _selectedFont = '';
+  const label = document.getElementById('fdSelectedLabel');
+  label.textContent = '— 不换字体 —';
+  label.style.fontFamily = 'inherit';
+  label.style.color = '#94a3b8';
+  label.style.fontSize = '13px';
+  document.querySelectorAll('.font-dropdown-item').forEach(el => el.classList.remove('selected'));
+  document.getElementById('fontPreviewArea').style.display = 'none';
+  closeFontDropdown();
+}
 
-function setEditInstruction(type) {
+function onFontSelect() {} // kept for compat
+
+function setAllEditInstructions() {
   const c = imgEditCardIndex >= 0 ? cardStates[imgEditCardIndex] : null;
   const text = c?.copywriting || '';
   const ta = document.getElementById('imgEditInstruction');
-  const existing = ta.value.trim();
-
-  // Templates: what to append
-  const templates = {
-    text:   `把图中的文字改成"${text}"`,
-    main:   `把中间的主图换成:`,
-    deco:   `把图案围的装饰小元素换成:`,
-    layout: `调整文字和主图的位置:`,
-  };
-  const snippet = templates[type];
-  if (!snippet) return;
-
-  // Append with 、separator if something already in box
-  if (existing) {
-    // If last char isn't , or 、or newline, add ,
-    const sep = /[,,、\n]$/.test(existing) ? '' : ',';
-    ta.value = existing + sep + snippet;
-  } else {
-    ta.value = snippet;
-  }
-
+  ta.value = `把图中的文字改成"${text}",把中间的主图换成:,把图案围的装饰小元素换成:,调整文字和主图的位置:`;
   ta.focus();
   ta.selectionStart = ta.selectionEnd = ta.value.length;
+}
+
+function setEditInstruction(type) {
+  // kept for compat, now unused in UI
+  setAllEditInstructions();
 }
 
 function openImgEditModal(cardIdx, imgIdx, copywriting) {
@@ -1630,10 +1682,8 @@ function openImgEditModal(cardIdx, imgIdx, copywriting) {
   } else {
     document.getElementById('imgEditInstruction').value = '';
   }
-  // 重置字体选择器
-  initFontSelector();
-  document.getElementById('fontSelector').value = '';
-  document.getElementById('fontPreviewArea').style.display = 'none';
+  // 重置字体下拉
+  resetFontDropdown();
   document.getElementById('imgEditLoading').style.display = 'none';
   document.getElementById('btnImgEdit').disabled = false;
   document.getElementById('imgEditModal').classList.add('show');
@@ -1657,7 +1707,7 @@ async function runImgEdit() {
   const idx = imgEditImgIndex;
   if (i < 0 || idx < 0) return;
   let instruction = document.getElementById('imgEditInstruction').value.trim();
-  const selectedFont = document.getElementById('fontSelector').value;
+  const selectedFont = _selectedFont;
   if (selectedFont) {
     const fontAppend = 'Change all text in the image to use ' + selectedFont + ' font style';
     instruction = instruction ? instruction + ', ' + fontAppend : fontAppend;
