@@ -2292,9 +2292,9 @@ function renderHistoryGrid() {
     const typeLabel = typeLabelMap[rec.type] || rec.type;
     const isSelected = historySelected.has(rec.id);
     const dateStr = new Date(rec.createdAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    return '<div class="hd-item' + (isSelected ? ' selected' : '') + '" onclick="historyToggleSelect('' + rec.id + '', event)">' +
+    return '<div class="hd-item' + (isSelected ? ' selected' : '') + '" onclick="historyToggleSelect(\'' + rec.id + '\', event)">' +
       '<div class="hd-item-check">' + (isSelected ? '&#10004;' : '') + '</div>' +
-      '<button class="hd-item-dl" onclick="historyDownloadOne('' + rec.id + '', event)" title="下载">⬇️</button>' +
+      '<button class="hd-item-dl" onclick="historyDownloadOne(\'' + rec.id + '\', event)" title="下载">⬇️</button>' +
       '<div class="hd-type-badge" style="background:' + typeBg + '">' + typeLabel + '</div>' +
       '<img src="' + rec.imageDataUrl + '" alt="' + (rec.copywriting||'') + '" loading="lazy">' +
       '<div class="hd-item-info">' +

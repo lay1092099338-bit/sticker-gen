@@ -205,6 +205,7 @@ app.post('/api/edit-image', async (req, res) => {
 app.post('/api/generate-variant', async (req, res) => {
   const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
+  console.log(`[generate-variant] copywriting=${(copywriting||'').slice(0,20)} theme=${theme} type=${variantType} idx=${variantIndex}`);
 
   try {
     // Build prompt - pass reference/inserted image for style hints
@@ -216,6 +217,7 @@ app.post('/api/generate-variant', async (req, res) => {
 
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
     const result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
     res.json({ success: true, imageUrl: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
