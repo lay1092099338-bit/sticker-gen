@@ -639,6 +639,15 @@ app.delete('/api/history/:id', (req, res) => {
 });
 
 const PORT = process.env.PORT || 7788;
+
+// Env detection: port 7788 = prod, anything else (e.g. 7789) = test
+const CURRENT_ENV = (parseInt(PORT) === 7788) ? 'prod' : 'test';
+
+// GET /api/env — tells the frontend which environment it's running in
+app.get('/api/env', (req, res) => {
+  res.json({ env: CURRENT_ENV, port: PORT });
+});
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Sticker Generator running on http://0.0.0.0:${PORT}`);
+  console.log(`Sticker Generator running on http://0.0.0.0:${PORT} [env: ${CURRENT_ENV}]`);
 });
