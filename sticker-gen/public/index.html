@@ -229,7 +229,7 @@ tr:hover td{background:var(--pink-light)}
 .hd-btn-clear:hover{background:#fecaca}
 .hd-btn-close{background:#f3f4f6;color:#374151}
 .hd-btn-close:hover{background:#e5e7eb}
-.hd-grid{flex:1;overflow-y:auto;padding:16px 18px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;align-content:start}
+.hd-grid{flex:1;overflow-y:auto;padding:16px 18px}
 .hd-item{border-radius:12px;border:2.5px solid #f1f5f9;overflow:hidden;position:relative;cursor:pointer;transition:border-color .2s,box-shadow .2s;background:white}
 .hd-item:hover{border-color:#f472b6;box-shadow:0 4px 16px rgba(244,114,182,.2)}
 .hd-item.selected{border-color:#be185d;box-shadow:0 0 0 3px rgba(244,114,182,.35)}
@@ -246,6 +246,10 @@ tr:hover td{background:var(--pink-light)}
 .hd-type-badge{position:absolute;bottom:36px;right:6px;font-size:9px;padding:1px 6px;border-radius:10px;color:white;font-weight:700;pointer-events:none}
 .hd-empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:#9ca3af;font-size:14px}
 .hd-loading{grid-column:1/-1;text-align:center;padding:40px;color:#9ca3af;font-size:14px}
+.hd-date-group{margin-bottom:8px}
+.hd-date-header{font-size:13px;font-weight:700;color:#6b7280;padding:10px 4px 6px;border-bottom:1.5px solid #f1f5f9;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.hd-date-count{font-size:11px;font-weight:600;color:#9ca3af;background:#f3f4f6;border-radius:50px;padding:1px 8px}
+.hd-date-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:16px}
 </style>
 </head>
 <body>
@@ -2285,35 +2289,60 @@ function renderHistoryGrid() {
     grid.innerHTML = '<div class="hd-empty">💭 还没有历史记录，生成图片后会自动保存到这里</div>';
     return;
   }
+
+  // Group by date
+  const groups = {};
+  historyRecords.forEach(rec => {
+    const d = new Date(rec.createdAt);
+    const key = d.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(rec);
+  });
+
   const typeBgMap = { edited: '#7c3aed', similar: '#be185d', creative: '#059669', main: '#be185d' };
   const typeLabelMap = { edited: '编辑版', similar: '相似', creative: '创意', main: '生成' };
-  grid.innerHTML = historyRecords.map(rec => {
-    const typeBg = typeBgMap[rec.type] || '#be185d';
-    const typeLabel = typeLabelMap[rec.type] || rec.type;
-    const isSelected = historySelected.has(rec.id);
-    const dateStr = new Date(rec.createdAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-    return '<div class="hd-item' + (isSelected ? ' selected' : '') + '" onclick="historyToggleSelect(\'' + rec.id + '\', event)">' +
-      '<div class="hd-item-check">' + (isSelected ? '&#10004;' : '') + '</div>' +
-      '<button class="hd-item-dl" onclick="historyDownloadOne(\'' + rec.id + '\', event)" title="下载">⬇️</button>' +
-      '<div class="hd-type-badge" style="background:' + typeBg + '">' + typeLabel + '</div>' +
-      '<img src="' + rec.imageDataUrl + '" alt="' + (rec.copywriting||'') + '" loading="lazy">' +
-      '<div class="hd-item-info">' +
-        '<div class="hd-item-copy">' + (rec.copywriting || rec.theme || '贴纸') + '</div>' +
-        '<div class="hd-item-meta">' + (rec.theme ? rec.theme + ' · ' : '') + dateStr + '</div>' +
-      '</div></div>';
-  }).join('');
+
+  // Render grouped by date (newest first)
+  const dateKeys = Object.keys(groups).sort((a, b) => {
+    const da = new Date(groups[a][0].createdAt), db = new Date(groups[b][0].createdAt);
+    return db - da;
+  });
+
+  let html = '';
+  dateKeys.forEach(dateKey => {
+    const recs = groups[dateKey];
+    html += '<div class="hd-date-group">';
+    html += '<div class="hd-date-header">📅 ' + dateKey + '<span class="hd-date-count">' + recs.length + ' 张</span></div>';
+    html += '<div class="hd-date-grid">';
+    recs.forEach(rec => {
+      const typeBg = typeBgMap[rec.type] || '#be185d';
+      const typeLabel = typeLabelMap[rec.type] || rec.type;
+      const isSelected = historySelected.has(rec.id);
+      const timeStr = new Date(rec.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+      html += '<div class="hd-item' + (isSelected ? ' selected' : '') + '" data-id="' + rec.id + '" onclick="historyToggleSelect(\'' + rec.id + '\', event)">' +
+        '<div class="hd-item-check">' + (isSelected ? '&#10004;' : '') + '</div>' +
+        '<button class="hd-item-dl" onclick="historyDownloadOne(\'' + rec.id + '\', event)" title="下载">⬇️</button>' +
+        '<div class="hd-type-badge" style="background:' + typeBg + '">' + typeLabel + '</div>' +
+        '<img src="' + rec.imageDataUrl + '" alt="' + (rec.copywriting||'').replace(/"/g,'&quot;') + '" loading="lazy">' +
+        '<div class="hd-item-info">' +
+          '<div class="hd-item-copy">' + (rec.copywriting || rec.theme || '贴纸') + '</div>' +
+          '<div class="hd-item-meta">' + (rec.theme ? rec.theme + ' · ' : '') + timeStr + '</div>' +
+        '</div></div>';
+    });
+    html += '</div></div>';
+  });
+  grid.innerHTML = html;
 }
 
 function historyToggleSelect(id, e) {
   if (e && e.target && e.target.closest && e.target.closest('.hd-item-dl')) return;
   if (historySelected.has(id)) historySelected.delete(id);
   else historySelected.add(id);
-  const items = document.querySelectorAll('.hd-item');
-  historyRecords.forEach((rec, i) => {
-    if (!items[i]) return;
-    const sel = historySelected.has(rec.id);
-    items[i].classList.toggle('selected', sel);
-    const checkEl = items[i].querySelector('.hd-item-check');
+  document.querySelectorAll('.hd-item').forEach(el => {
+    const elId = el.getAttribute('data-id');
+    const sel = historySelected.has(elId);
+    el.classList.toggle('selected', sel);
+    const checkEl = el.querySelector('.hd-item-check');
     if (checkEl) checkEl.innerHTML = sel ? '&#10004;' : '';
   });
   updateHistoryBatchBtn();
