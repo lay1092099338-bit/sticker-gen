@@ -5,6 +5,7 @@ const cors = require('cors');
 const https = require('https');
 const http = require('http');
 const path = require('path');
+const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { DOMParser } = require('@xmldom/xmldom');
 
@@ -577,6 +578,65 @@ async function searchUnsplash(query) {
     req.end();
   });
 }
+
+// ── History storage ──────────────────────────────────────────────────────────
+const HISTORY_DIR = path.join(__dirname, 'history');
+if (!fs.existsSync(HISTORY_DIR)) fs.mkdirSync(HISTORY_DIR, { recursive: true });
+
+function historyFile(env) {
+  const safe = (env === 'prod' || env === 'production') ? 'prod' : 'test';
+  return path.join(HISTORY_DIR, `history_${safe}.json`);
+}
+
+function readHistory(env) {
+  const file = historyFile(env);
+  if (!fs.existsSync(file)) return [];
+  try { return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { return []; }
+}
+
+function writeHistory(env, records) {
+  fs.writeFileSync(historyFile(env), JSON.stringify(records, null, 2), 'utf-8');
+}
+
+// GET /api/history?env=test|prod
+app.get('/api/history', (req, res) => {
+  const env = req.query.env || 'test';
+  const records = readHistory(env);
+  res.json({ success: true, records });
+});
+
+// POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type}] }
+app.post('/api/history', (req, res) => {
+  const { env = 'test', items = [] } = req.body;
+  if (!items.length) return res.json({ success: true });
+  const records = readHistory(env);
+  const timestamp = Date.now();
+  items.forEach(item => {
+    records.unshift({
+      id: `${timestamp}_${Math.random().toString(36).slice(2,8)}`,
+      createdAt: new Date().toISOString(),
+      copywriting: item.copywriting || '',
+      theme: item.theme || '',
+      imageDataUrl: item.imageDataUrl || '',
+      type: item.type || 'similar',
+      env: (env === 'prod' || env === 'production') ? 'prod' : 'test',
+    });
+  });
+  // Keep max 2000 entries per env
+  if (records.length > 2000) records.splice(2000);
+  writeHistory(env, records);
+  res.json({ success: true, count: items.length });
+});
+
+// DELETE /api/history/:id?env=test
+app.delete('/api/history/:id', (req, res) => {
+  const { id } = req.params;
+  const env = req.query.env || 'test';
+  let records = readHistory(env);
+  records = records.filter(r => r.id !== id);
+  writeHistory(env, records);
+  res.json({ success: true });
+});
 
 const PORT = process.env.PORT || 7788;
 app.listen(PORT, '0.0.0.0', () => {
