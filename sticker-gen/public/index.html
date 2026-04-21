@@ -673,10 +673,10 @@ function switchMode(mode) {
 
 async function updateHistoryBadge() {
   try {
-    const r = await fetch('/api/history?env=' + historyEnv + '&itemType=' + currentMode);
+    const r = await fetch('/api/history?env=' + historyEnv + '&itemType=' + currentMode + '&limit=1');
     const j = await r.json();
     const badge = document.getElementById('historyBadge');
-    if (badge) badge.textContent = (j.records || []).length;
+    if (badge) badge.textContent = j.total || (j.records || []).length;
   } catch(e) {}
 }
 
@@ -2314,16 +2314,28 @@ function showToast(msg,type){
 let historyEnv = 'test'; // will be overwritten by /api/env on load
 let historyRecords = [];
 let historySelected = new Set();
+let historyOffset = 0;
+let historyTotal = 0;
+const HISTORY_PAGE_SIZE = 20;
 
-async function loadHistory(env) {
+async function loadHistory(env, append = false) {
   if (env) historyEnv = env;
-  historySelected.clear();
-  updateHistoryBatchBtn();
-  document.getElementById('hdGrid').innerHTML = '<div class="hd-loading">⏳ 加载中...</div>';
+  if (!append) {
+    historyOffset = 0;
+    historyRecords = [];
+    historySelected.clear();
+    updateHistoryBatchBtn();
+    document.getElementById('hdGrid').innerHTML = '<div class="hd-loading">⏳ 加载中...</div>';
+  } else {
+    document.getElementById('hdLoadMoreBtn') && (document.getElementById('hdLoadMoreBtn').textContent = '⏳ 加载中...');
+  }
   try {
-    const r = await fetch('/api/history?env=' + historyEnv + '&itemType=' + currentMode);
+    const url = '/api/history?env=' + historyEnv + '&itemType=' + currentMode + '&limit=' + HISTORY_PAGE_SIZE + '&offset=' + historyOffset;
+    const r = await fetch(url);
     const j = await r.json();
-    historyRecords = j.records || [];
+    historyTotal = j.total || 0;
+    historyOffset += (j.records || []).length;
+    historyRecords = historyRecords.concat(j.records || []);
     renderHistoryGrid();
   } catch (e) {
     document.getElementById('hdGrid').innerHTML = '<div class="hd-empty">加载失败: ' + e.message + '</div>';
@@ -2333,9 +2345,10 @@ async function loadHistory(env) {
 function renderHistoryGrid() {
   const grid = document.getElementById('hdGrid');
   const count = historyRecords.length;
+  const totalStr = historyTotal > count ? '/' + historyTotal : '';
   const envText = historyEnv === 'prod' ? '🚀 生产环境' : '🧪 测试环境';
-  document.getElementById('hdCount').textContent = envText + ' 共 ' + count + ' 张';
-  document.getElementById('historyBadge').textContent = count;
+  document.getElementById('hdCount').textContent = envText + ' 共 ' + count + totalStr + ' 张';
+  document.getElementById('historyBadge').textContent = historyTotal || count;
   const envLabel = document.getElementById('hdEnvLabel');
   if (envLabel) {
     envLabel.textContent = historyEnv === 'prod' ? '🚀 生产' : '🧪 测试';
@@ -2387,6 +2400,10 @@ function renderHistoryGrid() {
     });
     html += '</div></div>';
   });
+  // Load more button
+  if (historyOffset < historyTotal) {
+    html += '<div style="text-align:center;padding:16px"><button id="hdLoadMoreBtn" onclick="loadHistory(null, true)" style="background:#f0abfc;border:none;border-radius:999px;padding:10px 28px;font-size:14px;font-weight:600;cursor:pointer;color:#7c3aed">加载更多 (' + historyOffset + '/' + historyTotal + ')</button></div>';
+  }
   grid.innerHTML = html;
 }
 
@@ -2480,9 +2497,9 @@ async function saveToHistory(env, items) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ env, items: itemsWithType })
     });
-    fetch('/api/history?env=' + env + '&itemType=' + currentMode).then(r => r.json()).then(j => {
+    fetch('/api/history?env=' + env + '&itemType=' + currentMode + '&limit=1').then(r => r.json()).then(j => {
       const badge = document.getElementById('historyBadge');
-      if (badge) badge.textContent = (j.records || []).length;
+      if (badge) badge.textContent = j.total || (j.records || []).length;
     });
   } catch (e) { console.warn('History save failed:', e); }
 }
@@ -2495,10 +2512,10 @@ async function saveToHistory(env, items) {
     if (envJ.env) historyEnv = envJ.env;
   } catch (e) {}
   try {
-    const r = await fetch('/api/history?env=' + historyEnv + '&itemType=' + currentMode);
+    const r = await fetch('/api/history?env=' + historyEnv + '&itemType=' + currentMode + '&limit=1');
     const j = await r.json();
     const badge = document.getElementById('historyBadge');
-    if (badge) badge.textContent = (j.records || []).length;
+    if (badge) badge.textContent = j.total || (j.records || []).length;
   } catch (e) {}
 })();
 </script>

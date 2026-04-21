@@ -749,13 +749,17 @@ function writeHistory(env, records) {
   fs.writeFileSync(historyFile(env), JSON.stringify(records, null, 2), 'utf-8');
 }
 
-// GET /api/history?env=test|prod
+// GET /api/history?env=test|prod&itemType=sticker|banner&limit=20&offset=0
 app.get('/api/history', (req, res) => {
   const env = req.query.env || 'test';
   const itemType = req.query.itemType || '';
+  const limit = Math.min(parseInt(req.query.limit) || 20, 50); // max 50 per page
+  const offset = parseInt(req.query.offset) || 0;
   let records = readHistory(env);
   if (itemType) records = records.filter(r => (r.itemType || 'sticker') === itemType);
-  res.json({ success: true, records });
+  const total = records.length;
+  const paged = records.slice(offset, offset + limit);
+  res.json({ success: true, records: paged, total, limit, offset });
 });
 
 // POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type,itemType}] }
