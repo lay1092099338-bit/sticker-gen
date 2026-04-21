@@ -20,11 +20,11 @@ header p{font-size:14px;opacity:.85;margin-top:6px}
 .mode-tab{flex:1;padding:14px 0;border:none;background:none;font-size:15px;font-weight:700;color:#9ca3af;cursor:pointer;transition:all .2s;letter-spacing:.3px}
 .mode-tab.active{color:#7c3aed;border-bottom:3px solid #7c3aed;background:#faf5ff;margin-bottom:-2.5px}
 .mode-tab:hover:not(.active){color:#6d28d9;background:#f5f3ff}
-/* Banner strip items: same 200px width as stickers, image height auto-fits */
-.banner-strip-item{width:200px!important}
-.banner-strip-item .strip-item-img-wrap{height:auto!important;min-height:40px}
+/* Banner strip items: wide card matching 6:1 banner ratio */
+.banner-strip-item{width:360px!important}
+.banner-strip-item .strip-item-img-wrap{height:auto!important;min-height:30px}
 .banner-strip-item .strip-item-img-wrap img{width:100%!important;height:auto!important;object-fit:contain!important}
-.banner-strip-item.generating-placeholder,.banner-strip-item.preview-placeholder{height:80px!important}
+.banner-strip-item.generating-placeholder,.banner-strip-item.preview-placeholder{height:60px!important;width:360px!important}
 /* Banner history: wider cards */
 .banner-history .hd-date-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
 .banner-history .hd-item img{aspect-ratio:auto!important;height:auto!important;object-fit:contain!important}
