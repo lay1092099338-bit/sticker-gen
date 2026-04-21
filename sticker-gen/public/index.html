@@ -1062,7 +1062,7 @@ async function handleStripImgClick(e, cardIdx, imgIdx) {
     const resp = await fetch('/api/swap-element', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageB64, clickX, clickY, apiKey })
+      body: JSON.stringify({ imageB64, clickX, clickY, apiKey, mode: currentMode })
     });
     const data = await resp.json();
     if (!data.success) throw new Error(data.error || '替换失败');
@@ -1433,7 +1433,8 @@ async function doSplitLayer() {
       body: JSON.stringify({
         imageB64: imgB64,
         instruction: 'Remove all text and numbers from this sticker. Leave the areas where text was as empty white space — do NOT fill them in with background patterns or colors. Keep all non-text graphic elements (illustrations, decorations, borders) exactly intact. Output the same circular sticker with blank white areas where the text used to be.',
-        apiKey
+        apiKey,
+        mode: currentMode
       })
     });
     const bgJson = await bgResp.json();
@@ -1457,7 +1458,8 @@ async function doSplitLayer() {
       body: JSON.stringify({
         imageB64: imgB64,
         instruction: 'Extract ONLY the text/numbers from this sticker onto a pure white (#ffffff) background. Reproduce the text with its EXACT original font style, font weight, lettering, color, size and position. No font labels, no annotations, no illustrations, no decorations, no border, no gradients — just the text on white.',
-        apiKey
+        apiKey,
+        mode: currentMode
       })
     });
     const textJson = await textResp.json();
@@ -1941,7 +1943,7 @@ async function runImgEdit() {
     const r = await fetch('/api/edit-image', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ imageB64: origImg.url, instruction, apiKey })
+      body: JSON.stringify({ imageB64: origImg.url, instruction, apiKey, mode: currentMode })
     });
     const j = await r.json();
     if (!j.success) throw new Error(j.error);

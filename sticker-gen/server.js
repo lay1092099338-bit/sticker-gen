@@ -191,11 +191,16 @@ app.post('/api/generate-image', async (req, res) => {
 
 // ── Edit generated image (Qwen Image Edit) ──────────────────────────────────
 app.post('/api/edit-image', async (req, res) => {
-  const { imageB64, instruction, apiKey } = req.body;
+  const { imageB64, instruction, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   if (!imageB64 || !instruction) return res.status(400).json({ success: false, error: 'Missing imageB64 or instruction' });
   try {
-    const result = await callImageEdit(effectiveKey, imageB64, instruction);
+    // Banner mode: use native wide-ratio model to preserve 6:1 aspect ratio
+    // Wrap instruction to ensure model knows it's editing a wide banner
+    const bannerInstruction = `This is a wide horizontal party banner (6:1 aspect ratio). ${instruction}\nIMPORTANT: Output must be a wide horizontal banner maintaining the same 6:1 wide aspect ratio. Do not crop or change the overall composition.`;
+    const result = (mode === 'banner')
+      ? await callModelverseBanner(effectiveKey, bannerInstruction, imageB64, null)
+      : await callImageEdit(effectiveKey, imageB64, instruction);
     res.json({ success: true, imageUrl: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -236,7 +241,7 @@ app.post('/api/generate-variant', async (req, res) => {
 
 // ── Swap element by click position ────────────────────────────────────────────
 app.post('/api/swap-element', async (req, res) => {
-  const { imageB64, clickX, clickY, apiKey } = req.body;
+  const { imageB64, clickX, clickY, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   if (!imageB64 || clickX == null || clickY == null) {
     return res.status(400).json({ success: false, error: 'Missing imageB64 or click coordinates' });
@@ -252,7 +257,12 @@ Please:
 
 Return the modified image.`;
 
-    const result = await callImageEdit(effectiveKey, imageB64, prompt);
+    const bannerPrompt = (mode === 'banner')
+      ? `This is a wide horizontal party banner (6:1 aspect ratio). ${prompt}\nIMPORTANT: Output must maintain the same wide horizontal 6:1 aspect ratio.`
+      : prompt;
+    const result = (mode === 'banner')
+      ? await callModelverseBanner(effectiveKey, bannerPrompt, imageB64, null)
+      : await callImageEdit(effectiveKey, imageB64, prompt);
     res.json({ success: true, imageUrl: result });
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
