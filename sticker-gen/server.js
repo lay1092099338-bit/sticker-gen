@@ -280,9 +280,9 @@ app.post('/api/refine-prompt', async (req, res) => {
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   const isBanner = mode === 'banner';
   const systemMsg = isBanner 
-    ? `You are an expert image generation prompt engineer for banner design.
+    ? `You are an expert image generation prompt engineer for Amazon party celebration banners.
 Rewrite the given prompt incorporating the user's modification requirements.
-Keep core structure: wide horizontal banner, 300x50cm (6:1 aspect ratio), landscape orientation, full-bleed design, theme-appropriate background color and accents.
+Keep core structure: wide horizontal banner (300x50cm, 6:1 aspect ratio), large prominent centered text as focal point, rich gradient/solid background, decorative accents (sparkles, diamonds, ribbons, confetti, glitter), elegant border, premium print-ready commercial quality.
 Never include hands, fingers, people, or body parts.
 Return ONLY the revised prompt, no explanations.`
     : `You are an expert image generation prompt engineer for sticker design.
@@ -320,25 +320,61 @@ function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
 
 function buildBannerPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
   const textLine = copywriting
-    ? `Text on the banner: "${copywriting}". Do NOT change, add, or remove any words.`
+    ? `The banner text is: "${copywriting}". Render this text LARGE and PROMINENTLY in the center of the banner. Do NOT change, add, or remove any words. The text must be the visual focal point, taking up at least 40-60% of the banner width. Use a bold, decorative, or elegant font style appropriate to the theme.`
     : 'No text on this banner.';
   const themeLine = theme ? `Theme/motif: ${theme}.` : '';
-  const printQuality = 'This is a COMMERCIAL PRODUCT banner for mass printing and retail sale. Size: 300cm x 50cm (6:1 aspect ratio). It must look clean, professional, and visually appealing. Wide horizontal layout, full-bleed design from edge to edge.';
-  const bannerLayout = 'IMPORTANT: This is a wide horizontal banner (6:1 aspect ratio, landscape orientation). The design must fill the entire wide canvas. Text and graphics should be arranged horizontally. Do NOT use a square or portrait composition.';
+
+  const bannerCore = `Design a WIDE HORIZONTAL party celebration banner for Amazon retail sale (300cm × 50cm, approximately 6:1 aspect ratio).
+
+This is a COMMERCIAL PRODUCT banner like those sold on Amazon for birthday parties, baby showers, weddings, and celebrations. Think of the typical Amazon party banner style:
+- Rich gradient or solid background color that fills the ENTIRE banner edge-to-edge
+- Large, prominent, beautifully styled text as the centerpiece (bold, metallic, glittery, or elegantly scripted)
+- Decorative accents around the text: sparkles, diamonds, glitter, ribbons, bows, confetti, stars, flowers, or balloons
+- A subtle decorative border or frame (glitter dots, diamond border, thin elegant line)
+- Professional print-ready quality with vibrant colors and clean composition
+- Everything arranged HORIZONTALLY across the wide banner format
+- The design must look premium and gift-worthy, not cheap or clipart-like
+
+Do NOT use a square or portrait composition. The banner is VERY WIDE and short.
+Do NOT include human hands, fingers, people, or body parts.
+Do NOT add any text other than what is specified.`;
+
+  const decorStyles = [
+    'sparkling diamonds and crystal gems scattered around corners, metallic shimmer accents',
+    'elegant ribbon bows and flowing satin ribbons, soft bokeh light effects',
+    'confetti and star bursts, festive party popper elements, playful sparkles',
+    'floral garlands and botanical wreaths framing the text, delicate vine accents',
+    'balloon clusters and streamer decorations, cheerful celebration motifs'
+  ];
 
   const variantStrategies = [
-    { label: 'Faithful Similar A', hint: 'Stay very close to the reference style. Wide horizontal format.' },
-    { label: 'Faithful Similar B', hint: 'Stay very close to the reference style. Slightly vary decorative elements in horizontal layout.' },
-    { label: 'Subtle Variation', hint: 'Keep same style but shift color tones. Wide horizontal composition.' },
-    { label: 'New Color & Pattern Scheme', hint: 'Completely different color palette. Redesign horizontal layout. Same theme/text.' },
-    { label: 'Creative Style Exploration', hint: 'Reimagine the banner in a creative new style. Wide horizontal 6:1 format.' }
+    {
+      label: 'Faithful Similar A',
+      hint: `Stay very close to the reference style. Reproduce the same color palette, background gradient, text styling, and decorative elements. Use: ${decorStyles[0]}. Keep the overall mood and premium feel identical.`
+    },
+    {
+      label: 'Faithful Similar B',
+      hint: `Stay very close to the reference style but slightly rearrange the decorative elements. Same color palette and text treatment. Use: ${decorStyles[1]}. The banner should feel like a sibling design.`
+    },
+    {
+      label: 'Subtle Variation',
+      hint: `Keep the same design family but shift the color temperature (e.g., warm to cool tones or vice versa). Adjust decorative density slightly. Use: ${decorStyles[2]}. Should feel like a fresh alternative from the same product line.`
+    },
+    {
+      label: 'New Color & Pattern Scheme',
+      hint: `Use a COMPLETELY different color palette (e.g., if original is purple/silver, switch to rose gold/pink, or navy/gold, or teal/silver). Redesign the decorative scheme to match. Use: ${decorStyles[3]}. Same theme and text but visually distinct mood.`
+    },
+    {
+      label: 'Creative Style Exploration',
+      hint: `Reimagine the banner in a bold new visual direction. Try an unexpected but premium style: maybe a luxurious black & gold theme, a pastel watercolor wash, a holographic/iridescent look, or a rustic kraft & greenery style. Use: ${decorStyles[4]}. Must still look like a professional Amazon party banner.`
+    }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
-    return `Look at the reference image. Create a wide horizontal banner based on it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${bannerLayout}\nDo not add any text other than what is specified above. Do not include human hands or body parts.\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `Look at the reference image carefully. Create a wide horizontal party banner inspired by it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${bannerCore}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
-  return `Create a wide horizontal banner design (300cm x 50cm, 6:1 aspect ratio).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${bannerLayout}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
