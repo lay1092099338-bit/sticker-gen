@@ -280,9 +280,9 @@ app.post('/api/refine-prompt', async (req, res) => {
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   const isBanner = mode === 'banner';
   const systemMsg = isBanner 
-    ? `You are an expert image generation prompt engineer for Amazon party celebration banners.
+    ? `You are an expert image generation prompt engineer for commercial Amazon party banners.
 Rewrite the given prompt incorporating the user's modification requirements.
-Keep core structure: wide horizontal banner (300x50cm, 6:1 aspect ratio), large prominent centered text as focal point, rich gradient/solid background, decorative accents (sparkles, diamonds, ribbons, confetti, glitter), elegant border, premium print-ready commercial quality.
+Keep core structure: wide horizontal banner (300x50cm, 6:1), hero number/word HUGE center with luxury texture (glitter/diamond/metallic), gradient background (lighter center, darker edges), sparkles and gem decorations in corners, small repeated numbers in background, elegant supporting text, premium print-ready commercial quality.
 Never include hands, fingers, people, or body parts.
 Return ONLY the revised prompt, no explanations.`
     : `You are an expert image generation prompt engineer for sticker design.
@@ -320,61 +320,70 @@ function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
 
 function buildBannerPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
   const textLine = copywriting
-    ? `The banner text is: "${copywriting}". Render this text LARGE and PROMINENTLY in the center of the banner. Do NOT change, add, or remove any words. The text must be the visual focal point, taking up at least 40-60% of the banner width. Use a bold, decorative, or elegant font style appropriate to the theme.`
+    ? `The banner text is: "${copywriting}". This text is the HERO of the banner. Render the key number/word EXTREMELY LARGE in the center (occupying 50%+ of the banner height) with a premium texture — such as glitter fill, diamond/rhinestone texture, metallic gold/silver/rose gold, or holographic foil. Supporting words like "Happy" and "Birthday" should be in an elegant script or clean serif font, noticeably smaller than the main number/word. Do NOT change, add, or remove any words.`
     : 'No text on this banner.';
   const themeLine = theme ? `Theme/motif: ${theme}.` : '';
 
   const hasRef = hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100);
 
-  const bannerCore = `Design a WIDE HORIZONTAL banner for Amazon retail sale (300cm × 50cm, approximately 6:1 aspect ratio).
+  const bannerCore = `Design a WIDE HORIZONTAL celebration banner for Amazon retail sale (300cm × 50cm, approximately 6:1 aspect ratio).
 
-This is a COMMERCIAL PRODUCT banner sold on Amazon. Key requirements:
-- The entire banner fills edge-to-edge with NO white/empty space
-- Large, prominent, beautifully styled text as the centerpiece
-- Decorative accents appropriate to the theme surrounding the text
-- Professional print-ready quality with vibrant colors and clean composition
-- Everything arranged HORIZONTALLY across the wide banner format
-- The design must look premium and retail-worthy
-${hasRef ? '- IMPORTANT: Follow the style, color palette, and overall aesthetic of the reference image closely. The reference image defines the visual direction — match its background treatment, text styling, decorative elements, and mood.' : ''}
+This is a COMMERCIAL PRINT PRODUCT — the kind of party banner sold on Amazon for birthdays, baby showers, weddings, anniversaries, and milestones. Study these characteristics of top-selling Amazon banners:
+
+BACKGROUND:
+- Rich, saturated gradient background that fills edge-to-edge with ZERO white space
+- Gradient flows from a lighter center (where text sits) to deeper/darker edges, creating a spotlight/stage effect
+- Examples: purple-to-deep-purple, navy-to-dark-navy, pink-to-magenta, black-to-charcoal, rose-gold-to-burgundy
+
+TEXT TREATMENT:
+- The key number or word is the LARGEST element, dead center, with a luxurious texture (glitter, diamonds, metallic, foil)
+- Supporting text ("Happy", "Birthday", etc.) is in elegant script or serif, smaller but complementary
+- A decorative ribbon/banner/sash may wrap behind or below the text as an accent
+- Text hierarchy is critical: main word/number > supporting words > decorative text
+
+DECORATIVE ELEMENTS (scattered around edges and corners, NOT covering the text):
+- Sparkle bursts and star glints (4-point or 6-point stars, white/silver)
+- Diamond gems or crystal shapes (especially in corner clusters)
+- The key number repeated in small size scattered in the background at various angles and opacities
+- Optional: metallic balloons, string lights, confetti, ribbons, bows, flowers — matching the theme
+- A subtle border: glitter dots, diamond frame, or thin elegant line
+
+COMPOSITION:
+- Horizontally centered, symmetrical or near-symmetrical layout
+- Clear visual hierarchy: center = text, edges = decoration, corners = accent clusters
+- Feels premium, celebratory, and gift-worthy — NOT cheap clipart
+${hasRef ? '\nIMPORTANT: The reference image defines the visual direction. Match its color palette, gradient style, text treatment, decorative element types, and overall mood as closely as possible.' : ''}
 
 Do NOT use a square or portrait composition. The banner is VERY WIDE and short.
 Do NOT include human hands, fingers, people, or body parts.
 Do NOT add any text other than what is specified.`;
 
-  const decorStyles = [
-    'keep decorative elements very close to the reference image style',
-    'same type of decorative elements as reference but slightly rearranged',
-    'similar decorative elements with adjusted density and placement',
-    'redesigned decorative scheme matching the new color palette',
-    'bold new decorative direction while maintaining premium quality'
-  ];
-
   const variantStrategies = [
     {
       label: 'Faithful Similar A',
-      hint: `Stay very close to the reference style. Reproduce the same color palette, background, text styling, and decorative elements. ${decorStyles[0]}. Keep the overall mood and premium feel identical.`
+      hint: 'Stay very close to the reference style. Reproduce the same color palette, gradient direction, text texture, and decorative elements. Keep the overall mood and premium feel identical. Only minor differences in sparkle/gem placement.'
     },
     {
       label: 'Faithful Similar B',
-      hint: `Stay very close to the reference style but slightly rearrange the decorative elements. Same color palette and text treatment. ${decorStyles[1]}. The banner should feel like a sibling design.`
+      hint: 'Stay very close to the reference style. Same color palette and text treatment. Slightly vary the decorative element arrangement — e.g., swap corner clusters from left-heavy to right-heavy, or adjust the density of background sparkles. Should feel like a sibling design.'
     },
     {
       label: 'Subtle Variation',
-      hint: `Keep the same design family but shift the color temperature (e.g., warm to cool tones or vice versa). ${decorStyles[2]}. Should feel like a fresh alternative from the same product line.`
+      hint: 'Keep the same design family but shift the color temperature slightly (e.g., warm purple to cool lavender, or deep navy to royal blue). Text texture stays similar. Adjust decorative density. Should feel like a fresh alternative from the same product line.'
     },
     {
       label: 'New Color & Pattern Scheme',
-      hint: `Use a COMPLETELY different color palette (e.g., if original is purple/silver, switch to rose gold/pink, or navy/gold, or teal/silver). ${decorStyles[3]}. Same theme and text but visually distinct mood.`
+      hint: 'Use a COMPLETELY different color palette (e.g., if original is purple/silver, switch to navy/gold, or rose-gold/blush, or black/gold, or teal/silver). Redesign the gradient and decorative elements to match the new palette. Same text content and hierarchy but visually distinct mood.'
     },
     {
       label: 'Creative Style Exploration',
-      hint: `Reimagine the banner in a bold new visual direction. Try an unexpected but premium style that still fits the theme. ${decorStyles[4]}. Must still look like a professional retail-quality banner.`
+      hint: 'Reimagine the banner in a bold new visual direction while keeping it retail-quality. Try: luxurious black & gold with diamond texture, pastel rainbow gradient with holographic foil text, rustic kraft with greenery and gold script, neon glow on dark background, or vintage Art Deco with geometric patterns. Must still look like a premium Amazon party banner.'
     }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasRef) {
-    return `Look at the reference image carefully. Create a wide horizontal banner that closely matches the style and aesthetic of this reference image.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${bannerCore}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `Look at the reference image carefully. This is a commercial Amazon party banner. Create a wide horizontal banner that closely matches the style and aesthetic of this reference image.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${bannerCore}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
   return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
