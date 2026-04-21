@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { DOMParser } = require('@xmldom/xmldom');
+const sharp = require('sharp');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -203,21 +204,30 @@ app.post('/api/edit-image', async (req, res) => {
 
 // ── Generate variant (similar or creative) ────────────────────────────────────
 app.post('/api/generate-variant', async (req, res) => {
-  const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
+  const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  console.log(`[generate-variant] copywriting=${(copywriting||'').slice(0,20)} theme=${theme} type=${variantType} idx=${variantIndex}`);
+  console.log(`[generate-variant] copywriting=${(copywriting||'').slice(0,20)} theme=${theme} type=${variantType} idx=${variantIndex} mode=${mode}`);
 
   try {
     // Build prompt - pass reference/inserted image for style hints
     const styleHintImg = insertedImageB64 || referenceImageB64;
-    const prompt = buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
+    const prompt = (mode === 'banner') 
+      ? buildBannerPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex)
+      : buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
 
     // If custom prompt set and creative type, use custom prompt
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
 
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
-    const result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    // Banner mode: use dedicated function with native wide aspect ratio (no crop needed)
+    let result;
+    if (mode === 'banner') {
+      result = await callModelverseBanner(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    } else {
+      result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    }
     console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
+
     res.json({ success: true, imageUrl: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -274,9 +284,16 @@ app.post('/api/generate-prompt', (req, res) => {
 
 // ── Refine prompt via LLM ────────────────────────────────────────────────────
 app.post('/api/refine-prompt', async (req, res) => {
-  const { currentPrompt, userInstruction, apiKey } = req.body;
+  const { currentPrompt, userInstruction, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  const systemMsg = `You are an expert image generation prompt engineer for sticker design.
+  const isBanner = mode === 'banner';
+  const systemMsg = isBanner 
+    ? `You are an expert image generation prompt engineer for commercial Amazon party banners.
+Rewrite the given prompt incorporating the user's modification requirements.
+Keep core structure: wide horizontal banner (300x50cm, 6:1), hero number/word HUGE center with luxury texture (glitter/diamond/metallic), gradient background (lighter center, darker edges), sparkles and gem decorations in corners, small repeated numbers in background, elegant supporting text, premium print-ready commercial quality.
+Never include hands, fingers, people, or body parts.
+Return ONLY the revised prompt, no explanations.`
+    : `You are an expert image generation prompt engineer for sticker design.
 Rewrite the given prompt incorporating the user's modification requirements.
 Keep core structure: circular sticker, 5x5cm, party celebration, illustration fills 100% of the circle edge-to-edge with zero white margins, theme-appropriate background color and accents, cute flat cartoon illustration style.
 Never include hands, fingers, people, or body parts. Never include outer ribbon rosette or badge frame.
@@ -307,6 +324,62 @@ app.get('/api/search-images', async (req, res) => {
 
 function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
   return buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc, 'similar', 0);
+}
+
+function buildBannerPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
+  const textLine = copywriting
+    ? `The banner text is: "${copywriting}". This text is the HERO of the banner. Render the key number/word EXTREMELY LARGE in the center (occupying 50%+ of the banner height) with a premium texture — such as glitter fill, diamond/rhinestone texture, metallic gold/silver/rose gold, or holographic foil. Supporting words like "Happy" and "Birthday" should be in an elegant script or clean serif font, noticeably smaller than the main number/word. Do NOT change, add, or remove any words.`
+    : 'No text on this banner.';
+  const themeLine = theme ? `Theme/motif: ${theme}.` : '';
+
+  const hasRef = hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100);
+
+  const bannerCore = `*** CRITICAL FORMAT REQUIREMENT ***
+The output image MUST be a VERY WIDE HORIZONTAL rectangle — the width must be approximately 6 times the height (e.g., 1800x300 pixels, or 1200x200 pixels). Think of a long, narrow ribbon shape. This is NOT a poster, NOT a square, NOT a portrait. It is an extremely wide and short banner like a strip/ribbon.
+
+Design a wide horizontal celebration banner for Amazon retail sale (300cm × 50cm).
+
+This is a commercial print product. Requirements:
+- The banner is a long horizontal strip — much wider than tall
+- Text and decorations must be arranged LEFT-TO-RIGHT across the wide format
+- Background fills edge-to-edge with no white/empty space
+- Large, prominent, beautifully styled text as the centerpiece
+- Decorative elements appropriate to the theme around the text
+- Professional print-ready quality, premium and retail-worthy
+${hasRef ? '\nREFERENCE IMAGE: Use the reference image as STYLE INSPIRATION ONLY — take its color palette, decorative element types, and artistic style, but RECOMPOSE everything into the wide horizontal banner format. Do NOT reproduce the reference image layout — it may be square or vertical. You must redesign the composition to be extremely wide and short.' : ''}
+
+Do NOT generate a square or portrait/vertical image. The image MUST be very wide and short.
+Do NOT include human hands, fingers, people, or body parts.
+Do NOT add any text other than what is specified.`;
+
+  const variantStrategies = [
+    {
+      label: 'Faithful Similar A',
+      hint: 'Stay very close to the reference style. Reproduce the same color palette, gradient direction, text texture, and decorative elements. Keep the overall mood and premium feel identical. Only minor differences in sparkle/gem placement.'
+    },
+    {
+      label: 'Faithful Similar B',
+      hint: 'Stay very close to the reference style. Same color palette and text treatment. Slightly vary the decorative element arrangement — e.g., swap corner clusters from left-heavy to right-heavy, or adjust the density of background sparkles. Should feel like a sibling design.'
+    },
+    {
+      label: 'Subtle Variation',
+      hint: 'Keep the same design family but shift the color temperature slightly (e.g., warm purple to cool lavender, or deep navy to royal blue). Text texture stays similar. Adjust decorative density. Should feel like a fresh alternative from the same product line.'
+    },
+    {
+      label: 'New Color & Pattern Scheme',
+      hint: 'Use a COMPLETELY different color palette (e.g., if original is purple/silver, switch to navy/gold, or rose-gold/blush, or black/gold, or teal/silver). Redesign the gradient and decorative elements to match the new palette. Same text content and hierarchy but visually distinct mood.'
+    },
+    {
+      label: 'Creative Style Exploration',
+      hint: 'Keep the same decorative element types and style from the reference image, but reimagine the overall visual direction boldly. Change the color palette dramatically, try a different gradient angle or background treatment, and apply a fresh text texture — while keeping the same category of decorations (if reference has gems, still use gems but styled differently; if it has balloons, still use balloons in new colors). The result should feel like a premium reinterpretation, not a copy and not a completely unrelated design.'
+    }
+  ];
+  const strategy = variantStrategies[variantIndex] || variantStrategies[0];
+
+  if (hasRef) {
+    return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/decoration inspiration ONLY. Do NOT copy its layout or aspect ratio. Recompose into a wide horizontal banner (6:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  }
+  return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
@@ -444,6 +517,72 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
             if (imgPart) { resolve(imgPart.image_url?.url || imgPart.url || imgPart.data); return; }
           }
           reject(new Error('No image in response: ' + JSON.stringify(json).slice(0, 300)));
+        } catch (e) {
+          reject(new Error('Parse error: ' + data.slice(0, 300)));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// Banner-specific image generation: uses gemini-3.1-flash-image-preview with aspect_ratio for native wide output
+async function callModelverseBanner(apiKey, prompt, referenceImageB64, insertedImageB64) {
+  return new Promise((resolve, reject) => {
+    let content;
+    const hasRefImage = referenceImageB64 && referenceImageB64.length > 100;
+    const hasInsImage = insertedImageB64 && insertedImageB64.length > 100;
+
+    if (hasRefImage || hasInsImage) {
+      content = [];
+      content.push({ type: 'text', text: prompt });
+      if (hasRefImage) {
+        const mime = referenceImageB64.startsWith('data:') ? referenceImageB64.split(';')[0].split(':')[1] : 'image/jpeg';
+        const b64data = referenceImageB64.startsWith('data:') ? referenceImageB64.split(',')[1] : referenceImageB64;
+        content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${b64data}` } });
+      }
+      if (hasInsImage) {
+        const mime2 = insertedImageB64.startsWith('data:') ? insertedImageB64.split(';')[0].split(':')[1] : 'image/jpeg';
+        const b64data2 = insertedImageB64.startsWith('data:') ? insertedImageB64.split(',')[1] : insertedImageB64;
+        content.push({ type: 'image_url', image_url: { url: `data:${mime2};base64,${b64data2}` } });
+      }
+    } else {
+      content = prompt;
+    }
+
+    const bodyObj = {
+      model: 'gemini-3.1-flash-image-preview',
+      messages: [{ role: 'user', content }],
+      response_modalities: ['TEXT', 'IMAGE'],
+      generation_config: { aspect_ratio: '16:9' }
+    };
+    const body = JSON.stringify(bodyObj);
+
+    const options = {
+      hostname: 'api.modelverse.cn', port: 443, path: '/v1/chat/completions', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Content-Length': Buffer.byteLength(body) }
+    };
+
+    let data = '';
+    const req = https.request(options, (response) => {
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.message?.content;
+          if (typeof content === 'string') {
+            const mdMatch = content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
+            if (mdMatch) { resolve(mdMatch[1]); return; }
+            const dataUriMatch = content.match(/(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/);
+            if (dataUriMatch) { resolve(dataUriMatch[1]); return; }
+          }
+          if (Array.isArray(content)) {
+            const imgPart = content.find(p => p.type === 'image_url' || p.type === 'image');
+            if (imgPart) { resolve(imgPart.image_url?.url || imgPart.url || imgPart.data); return; }
+          }
+          reject(new Error('No image in banner response: ' + JSON.stringify(json).slice(0, 300)));
         } catch (e) {
           reject(new Error('Parse error: ' + data.slice(0, 300)));
         }
@@ -603,11 +742,13 @@ function writeHistory(env, records) {
 // GET /api/history?env=test|prod
 app.get('/api/history', (req, res) => {
   const env = req.query.env || 'test';
-  const records = readHistory(env);
+  const itemType = req.query.itemType || '';
+  let records = readHistory(env);
+  if (itemType) records = records.filter(r => (r.itemType || 'sticker') === itemType);
   res.json({ success: true, records });
 });
 
-// POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type}] }
+// POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type,itemType}] }
 app.post('/api/history', (req, res) => {
   const { env = 'test', items = [] } = req.body;
   if (!items.length) return res.json({ success: true });
@@ -621,6 +762,7 @@ app.post('/api/history', (req, res) => {
       theme: item.theme || '',
       imageDataUrl: item.imageDataUrl || '',
       type: item.type || 'similar',
+      itemType: item.itemType || 'sticker',
       env: (env === 'prod' || env === 'production') ? 'prod' : 'test',
     });
   });
@@ -639,6 +781,39 @@ app.delete('/api/history/:id', (req, res) => {
   writeHistory(env, records);
   res.json({ success: true });
 });
+
+// ── Banner post-processing: crop any image to 6:1 ratio ─────────────────────
+async function cropToBannerRatio(dataUrl) {
+  // Extract base64 buffer
+  const matches = dataUrl.match(/^data:image\/([a-z]+);base64,(.+)$/i);
+  if (!matches) return dataUrl;
+  const imgBuf = Buffer.from(matches[2], 'base64');
+
+  const meta = await sharp(imgBuf).metadata();
+  const { width, height } = meta;
+  const targetRatio = 6; // width:height = 6:1
+  const currentRatio = width / height;
+
+  let processed;
+  if (currentRatio >= targetRatio - 0.5) {
+    // Already wide enough, just resize to standard dimensions
+    processed = await sharp(imgBuf)
+      .resize(1800, 300, { fit: 'fill' })
+      .png()
+      .toBuffer();
+  } else {
+    // Image is too tall (square or portrait) — take a horizontal center strip
+    const cropHeight = Math.round(width / targetRatio);
+    const top = Math.round((height - cropHeight) / 2);
+    processed = await sharp(imgBuf)
+      .extract({ left: 0, top: Math.max(0, top), width, height: Math.min(cropHeight, height) })
+      .resize(1800, 300, { fit: 'fill' })
+      .png()
+      .toBuffer();
+  }
+
+  return 'data:image/png;base64,' + processed.toString('base64');
+}
 
 const PORT = process.env.PORT || 7788;
 
