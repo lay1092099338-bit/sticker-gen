@@ -377,7 +377,7 @@ Do NOT add any text other than what is specified.`;
     },
     {
       label: 'Creative Style Exploration',
-      hint: 'Reimagine the banner in a bold new visual direction while keeping it retail-quality. Try: luxurious black & gold with diamond texture, pastel rainbow gradient with holographic foil text, rustic kraft with greenery and gold script, neon glow on dark background, or vintage Art Deco with geometric patterns. Must still look like a premium Amazon party banner.'
+      hint: 'Keep the same decorative element types and style from the reference image, but reimagine the overall visual direction boldly. Change the color palette dramatically, try a different gradient angle or background treatment, and apply a fresh text texture — while keeping the same category of decorations (if reference has gems, still use gems but styled differently; if it has balloons, still use balloons in new colors). The result should feel like a premium reinterpretation, not a copy and not a completely unrelated design.'
     }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
