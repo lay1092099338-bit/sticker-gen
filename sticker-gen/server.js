@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 const AdmZip = require('adm-zip');
 const { DOMParser } = require('@xmldom/xmldom');
+const sharp = require('sharp');
 
 const app = express();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -218,8 +219,19 @@ app.post('/api/generate-variant', async (req, res) => {
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
 
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
-    const result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    let result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
     console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
+
+    // Banner post-processing: crop/resize to 6:1 aspect ratio
+    if (mode === 'banner' && result) {
+      try {
+        result = await cropToBannerRatio(result);
+        console.log(`[generate-variant] banner crop done, new len=${(result||'').length}`);
+      } catch (cropErr) {
+        console.error('[generate-variant] banner crop failed:', cropErr.message);
+      }
+    }
+
     res.json({ success: true, imageUrl: result });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -707,6 +719,39 @@ app.delete('/api/history/:id', (req, res) => {
   writeHistory(env, records);
   res.json({ success: true });
 });
+
+// ── Banner post-processing: crop any image to 6:1 ratio ─────────────────────
+async function cropToBannerRatio(dataUrl) {
+  // Extract base64 buffer
+  const matches = dataUrl.match(/^data:image\/([a-z]+);base64,(.+)$/i);
+  if (!matches) return dataUrl;
+  const imgBuf = Buffer.from(matches[2], 'base64');
+
+  const meta = await sharp(imgBuf).metadata();
+  const { width, height } = meta;
+  const targetRatio = 6; // width:height = 6:1
+  const currentRatio = width / height;
+
+  let processed;
+  if (currentRatio >= targetRatio - 0.5) {
+    // Already wide enough, just resize to standard dimensions
+    processed = await sharp(imgBuf)
+      .resize(1800, 300, { fit: 'fill' })
+      .png()
+      .toBuffer();
+  } else {
+    // Image is too tall (square or portrait) — take a horizontal center strip
+    const cropHeight = Math.round(width / targetRatio);
+    const top = Math.round((height - cropHeight) / 2);
+    processed = await sharp(imgBuf)
+      .extract({ left: 0, top: Math.max(0, top), width, height: Math.min(cropHeight, height) })
+      .resize(1800, 300, { fit: 'fill' })
+      .png()
+      .toBuffer();
+  }
+
+  return 'data:image/png;base64,' + processed.toString('base64');
+}
 
 const PORT = process.env.PORT || 7788;
 
