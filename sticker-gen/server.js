@@ -219,7 +219,8 @@ app.post('/api/generate-variant', async (req, res) => {
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
 
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
-    let result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    const bannerParams = (mode === 'banner') ? { size: '1536x256' } : {};
+    let result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64, bannerParams);
     console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
 
     // Banner post-processing: crop/resize to 6:1 aspect ratio
@@ -442,7 +443,7 @@ async function callImageEdit(apiKey, imageB64, instruction) {
   return callModelverse(apiKey, instruction, imageB64, null);
 }
 
-async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB64) {
+async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB64, extraParams) {
   return new Promise((resolve, reject) => {
     // Build content array - include images if provided
     let content;
@@ -485,7 +486,8 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
     const body = JSON.stringify({
       model: 'gemini-3-pro-image-preview',
       messages: [{ role: 'user', content }],
-      response_modalities: ['TEXT', 'IMAGE']
+      response_modalities: ['TEXT', 'IMAGE'],
+      ...(extraParams || {})
     });
 
     const options = {
