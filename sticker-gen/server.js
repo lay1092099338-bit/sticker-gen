@@ -326,35 +326,21 @@ function buildBannerPrompt(copywriting, theme, hasReferenceImg, insertedImageB64
 
   const hasRef = hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100);
 
-  const bannerCore = `Design a WIDE HORIZONTAL celebration banner for Amazon retail sale (300cm × 50cm, approximately 6:1 aspect ratio).
+  const bannerCore = `*** CRITICAL FORMAT REQUIREMENT ***
+The output image MUST be a VERY WIDE HORIZONTAL rectangle — the width must be approximately 6 times the height (e.g., 1800x300 pixels, or 1200x200 pixels). Think of a long, narrow ribbon shape. This is NOT a poster, NOT a square, NOT a portrait. It is an extremely wide and short banner like a strip/ribbon.
 
-This is a COMMERCIAL PRINT PRODUCT — the kind of party banner sold on Amazon for birthdays, baby showers, weddings, anniversaries, and milestones. Study these characteristics of top-selling Amazon banners:
+Design a wide horizontal celebration banner for Amazon retail sale (300cm × 50cm).
 
-BACKGROUND:
-- Rich, saturated gradient background that fills edge-to-edge with ZERO white space
-- Gradient flows from a lighter center (where text sits) to deeper/darker edges, creating a spotlight/stage effect
-- Examples: purple-to-deep-purple, navy-to-dark-navy, pink-to-magenta, black-to-charcoal, rose-gold-to-burgundy
+This is a commercial print product. Requirements:
+- The banner is a long horizontal strip — much wider than tall
+- Text and decorations must be arranged LEFT-TO-RIGHT across the wide format
+- Background fills edge-to-edge with no white/empty space
+- Large, prominent, beautifully styled text as the centerpiece
+- Decorative elements appropriate to the theme around the text
+- Professional print-ready quality, premium and retail-worthy
+${hasRef ? '\nREFERENCE IMAGE: Use the reference image as STYLE INSPIRATION ONLY — take its color palette, decorative element types, and artistic style, but RECOMPOSE everything into the wide horizontal banner format. Do NOT reproduce the reference image layout — it may be square or vertical. You must redesign the composition to be extremely wide and short.' : ''}
 
-TEXT TREATMENT:
-- The key number or word is the LARGEST element, dead center, with a luxurious texture (glitter, diamonds, metallic, foil)
-- Supporting text ("Happy", "Birthday", etc.) is in elegant script or serif, smaller but complementary
-- A decorative ribbon/banner/sash may wrap behind or below the text as an accent
-- Text hierarchy is critical: main word/number > supporting words > decorative text
-
-DECORATIVE ELEMENTS (scattered around edges and corners, NOT covering the text):
-- Sparkle bursts and star glints (4-point or 6-point stars, white/silver)
-- Diamond gems or crystal shapes (especially in corner clusters)
-- The key number repeated in small size scattered in the background at various angles and opacities
-- Optional: metallic balloons, string lights, confetti, ribbons, bows, flowers — matching the theme
-- A subtle border: glitter dots, diamond frame, or thin elegant line
-
-COMPOSITION:
-- Horizontally centered, symmetrical or near-symmetrical layout
-- Clear visual hierarchy: center = text, edges = decoration, corners = accent clusters
-- Feels premium, celebratory, and gift-worthy — NOT cheap clipart
-${hasRef ? '\nIMPORTANT: The reference image defines the visual direction. Match its color palette, gradient style, text treatment, decorative element types, and overall mood as closely as possible.' : ''}
-
-Do NOT use a square or portrait composition. The banner is VERY WIDE and short.
+Do NOT generate a square or portrait/vertical image. The image MUST be very wide and short.
 Do NOT include human hands, fingers, people, or body parts.
 Do NOT add any text other than what is specified.`;
 
@@ -383,7 +369,7 @@ Do NOT add any text other than what is specified.`;
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasRef) {
-    return `Look at the reference image carefully. This is a commercial Amazon party banner. Create a wide horizontal banner that closely matches the style and aesthetic of this reference image.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${bannerCore}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/decoration inspiration ONLY. Do NOT copy its layout or aspect ratio. Recompose into a wide horizontal banner (6:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
   return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
