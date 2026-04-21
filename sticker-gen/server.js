@@ -219,18 +219,14 @@ app.post('/api/generate-variant', async (req, res) => {
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
 
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
-    let result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
-    console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
-
-    // Banner post-processing: crop/resize to 6:1 aspect ratio
-    if (mode === 'banner' && result) {
-      try {
-        result = await cropToBannerRatio(result);
-        console.log(`[generate-variant] banner crop done, new len=${(result||'').length}`);
-      } catch (cropErr) {
-        console.error('[generate-variant] banner crop failed:', cropErr.message);
-      }
+    // Banner mode: use dedicated function with native wide aspect ratio (no crop needed)
+    let result;
+    if (mode === 'banner') {
+      result = await callModelverseBanner(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    } else {
+      result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
     }
+    console.log(`[generate-variant] SUCCESS copywriting=${(copywriting||'').slice(0,20)} imageLen=${(result||'').length}`);
 
     res.json({ success: true, imageUrl: result });
   } catch (e) {
@@ -521,6 +517,72 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
             if (imgPart) { resolve(imgPart.image_url?.url || imgPart.url || imgPart.data); return; }
           }
           reject(new Error('No image in response: ' + JSON.stringify(json).slice(0, 300)));
+        } catch (e) {
+          reject(new Error('Parse error: ' + data.slice(0, 300)));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+// Banner-specific image generation: uses gemini-3.1-flash-image-preview with aspect_ratio for native wide output
+async function callModelverseBanner(apiKey, prompt, referenceImageB64, insertedImageB64) {
+  return new Promise((resolve, reject) => {
+    let content;
+    const hasRefImage = referenceImageB64 && referenceImageB64.length > 100;
+    const hasInsImage = insertedImageB64 && insertedImageB64.length > 100;
+
+    if (hasRefImage || hasInsImage) {
+      content = [];
+      content.push({ type: 'text', text: prompt });
+      if (hasRefImage) {
+        const mime = referenceImageB64.startsWith('data:') ? referenceImageB64.split(';')[0].split(':')[1] : 'image/jpeg';
+        const b64data = referenceImageB64.startsWith('data:') ? referenceImageB64.split(',')[1] : referenceImageB64;
+        content.push({ type: 'image_url', image_url: { url: `data:${mime};base64,${b64data}` } });
+      }
+      if (hasInsImage) {
+        const mime2 = insertedImageB64.startsWith('data:') ? insertedImageB64.split(';')[0].split(':')[1] : 'image/jpeg';
+        const b64data2 = insertedImageB64.startsWith('data:') ? insertedImageB64.split(',')[1] : insertedImageB64;
+        content.push({ type: 'image_url', image_url: { url: `data:${mime2};base64,${b64data2}` } });
+      }
+    } else {
+      content = prompt;
+    }
+
+    const bodyObj = {
+      model: 'gemini-3.1-flash-image-preview',
+      messages: [{ role: 'user', content }],
+      response_modalities: ['TEXT', 'IMAGE'],
+      generation_config: { aspect_ratio: '16:9' }
+    };
+    const body = JSON.stringify(bodyObj);
+
+    const options = {
+      hostname: 'api.modelverse.cn', port: 443, path: '/v1/chat/completions', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}`, 'Content-Length': Buffer.byteLength(body) }
+    };
+
+    let data = '';
+    const req = https.request(options, (response) => {
+      response.on('data', chunk => data += chunk);
+      response.on('end', () => {
+        try {
+          const json = JSON.parse(data);
+          const content = json.choices?.[0]?.message?.content;
+          if (typeof content === 'string') {
+            const mdMatch = content.match(/!\[.*?\]\((data:image\/[^;]+;base64,[^)]+)\)/);
+            if (mdMatch) { resolve(mdMatch[1]); return; }
+            const dataUriMatch = content.match(/(data:image\/[^;]+;base64,[A-Za-z0-9+/=]+)/);
+            if (dataUriMatch) { resolve(dataUriMatch[1]); return; }
+          }
+          if (Array.isArray(content)) {
+            const imgPart = content.find(p => p.type === 'image_url' || p.type === 'image');
+            if (imgPart) { resolve(imgPart.image_url?.url || imgPart.url || imgPart.data); return; }
+          }
+          reject(new Error('No image in banner response: ' + JSON.stringify(json).slice(0, 300)));
         } catch (e) {
           reject(new Error('Parse error: ' + data.slice(0, 300)));
         }
