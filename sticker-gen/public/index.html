@@ -20,11 +20,11 @@ header p{font-size:14px;opacity:.85;margin-top:6px}
 .mode-tab{flex:1;padding:14px 0;border:none;background:none;font-size:15px;font-weight:700;color:#9ca3af;cursor:pointer;transition:all .2s;letter-spacing:.3px}
 .mode-tab.active{color:#7c3aed;border-bottom:3px solid #7c3aed;background:#faf5ff;margin-bottom:-2.5px}
 .mode-tab:hover:not(.active){color:#6d28d9;background:#f5f3ff}
-/* Banner strip items: wide card matching 6:1 banner ratio */
-.banner-strip-item{width:360px!important}
-.banner-strip-item .strip-item-img-wrap{height:auto!important;min-height:30px}
-.banner-strip-item .strip-item-img-wrap img{width:100%!important;height:auto!important;object-fit:contain!important}
-.banner-strip-item.generating-placeholder,.banner-strip-item.preview-placeholder{height:60px!important;width:360px!important}
+/* Banner strip items: full width, auto height */
+.banner-strip-item{width:100%!important;max-width:100%!important;flex-shrink:1!important}
+.banner-strip-item .strip-item-img-wrap{height:auto!important;min-height:30px;overflow:hidden!important}
+.banner-strip-item .strip-item-img-wrap img{width:100%!important;height:auto!important;object-fit:contain!important;display:block!important}
+.banner-strip-item.generating-placeholder,.banner-strip-item.preview-placeholder{height:60px!important;width:100%!important}
 /* Banner history: wider cards */
 .banner-history .hd-date-grid{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
 .banner-history .hd-item img{aspect-ratio:auto!important;height:auto!important;object-fit:contain!important}
@@ -57,6 +57,7 @@ tr:hover td{background:var(--pink-light)}
 .theme-group-meta{font-size:12px;color:var(--text-light)}
 .theme-group-body{padding:16px 20px 20px}
 .image-strip{display:flex;gap:14px;flex-wrap:wrap}
+.banner-mode .image-strip{flex-direction:column;gap:10px}
 .strip-item{position:relative;width:200px;flex-shrink:0;border-radius:12px;overflow:visible;cursor:default;border:2px solid var(--border);transition:border-color .2s,box-shadow .2s;display:flex;flex-direction:column}
 .strip-item:hover{border-color:var(--pink);box-shadow:0 4px 20px rgba(244,114,182,.3)}
 .strip-item.active{border-color:var(--pink-dark);box-shadow:0 0 0 3px var(--pink)}
@@ -646,6 +647,7 @@ function getEmoji(t){if(!t)return'🎀';for(const[k,v]of Object.entries(THEME_EM
 
 function switchMode(mode) {
   currentMode = mode;
+  document.body.classList.toggle('banner-mode', mode === 'banner');
   document.getElementById('tabSticker').classList.toggle('active', mode === 'sticker');
   document.getElementById('tabBanner').classList.toggle('active', mode === 'banner');
   if (mode === 'banner') {
