@@ -203,14 +203,16 @@ app.post('/api/edit-image', async (req, res) => {
 
 // ── Generate variant (similar or creative) ────────────────────────────────────
 app.post('/api/generate-variant', async (req, res) => {
-  const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey } = req.body;
+  const { copywriting, theme, hasReferenceImg, referenceImageB64, insertedImageB64, customPrompt, variantType, variantIndex, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  console.log(`[generate-variant] copywriting=${(copywriting||'').slice(0,20)} theme=${theme} type=${variantType} idx=${variantIndex}`);
+  console.log(`[generate-variant] copywriting=${(copywriting||'').slice(0,20)} theme=${theme} type=${variantType} idx=${variantIndex} mode=${mode}`);
 
   try {
     // Build prompt - pass reference/inserted image for style hints
     const styleHintImg = insertedImageB64 || referenceImageB64;
-    const prompt = buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
+    const prompt = (mode === 'banner') 
+      ? buildBannerPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex)
+      : buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
 
     // If custom prompt set and creative type, use custom prompt
     const finalPrompt = (variantType === 'creative' && customPrompt) ? customPrompt : prompt;
@@ -274,9 +276,16 @@ app.post('/api/generate-prompt', (req, res) => {
 
 // ── Refine prompt via LLM ────────────────────────────────────────────────────
 app.post('/api/refine-prompt', async (req, res) => {
-  const { currentPrompt, userInstruction, apiKey } = req.body;
+  const { currentPrompt, userInstruction, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  const systemMsg = `You are an expert image generation prompt engineer for sticker design.
+  const isBanner = mode === 'banner';
+  const systemMsg = isBanner 
+    ? `You are an expert image generation prompt engineer for banner design.
+Rewrite the given prompt incorporating the user's modification requirements.
+Keep core structure: wide horizontal banner, 300x50cm (6:1 aspect ratio), landscape orientation, full-bleed design, theme-appropriate background color and accents.
+Never include hands, fingers, people, or body parts.
+Return ONLY the revised prompt, no explanations.`
+    : `You are an expert image generation prompt engineer for sticker design.
 Rewrite the given prompt incorporating the user's modification requirements.
 Keep core structure: circular sticker, 5x5cm, party celebration, illustration fills 100% of the circle edge-to-edge with zero white margins, theme-appropriate background color and accents, cute flat cartoon illustration style.
 Never include hands, fingers, people, or body parts. Never include outer ribbon rosette or badge frame.
@@ -307,6 +316,29 @@ app.get('/api/search-images', async (req, res) => {
 
 function buildPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc) {
   return buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageDesc, 'similar', 0);
+}
+
+function buildBannerPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
+  const textLine = copywriting
+    ? `Text on the banner: "${copywriting}". Do NOT change, add, or remove any words.`
+    : 'No text on this banner.';
+  const themeLine = theme ? `Theme/motif: ${theme}.` : '';
+  const printQuality = 'This is a COMMERCIAL PRODUCT banner for mass printing and retail sale. Size: 300cm x 50cm (6:1 aspect ratio). It must look clean, professional, and visually appealing. Wide horizontal layout, full-bleed design from edge to edge.';
+  const bannerLayout = 'IMPORTANT: This is a wide horizontal banner (6:1 aspect ratio, landscape orientation). The design must fill the entire wide canvas. Text and graphics should be arranged horizontally. Do NOT use a square or portrait composition.';
+
+  const variantStrategies = [
+    { label: 'Faithful Similar A', hint: 'Stay very close to the reference style. Wide horizontal format.' },
+    { label: 'Faithful Similar B', hint: 'Stay very close to the reference style. Slightly vary decorative elements in horizontal layout.' },
+    { label: 'Subtle Variation', hint: 'Keep same style but shift color tones. Wide horizontal composition.' },
+    { label: 'New Color & Pattern Scheme', hint: 'Completely different color palette. Redesign horizontal layout. Same theme/text.' },
+    { label: 'Creative Style Exploration', hint: 'Reimagine the banner in a creative new style. Wide horizontal 6:1 format.' }
+  ];
+  const strategy = variantStrategies[variantIndex] || variantStrategies[0];
+
+  if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
+    return `Look at the reference image. Create a wide horizontal banner based on it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${bannerLayout}\nDo not add any text other than what is specified above. Do not include human hands or body parts.\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  }
+  return `Create a wide horizontal banner design (300cm x 50cm, 6:1 aspect ratio).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${bannerLayout}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
@@ -603,11 +635,13 @@ function writeHistory(env, records) {
 // GET /api/history?env=test|prod
 app.get('/api/history', (req, res) => {
   const env = req.query.env || 'test';
-  const records = readHistory(env);
+  const itemType = req.query.itemType || '';
+  let records = readHistory(env);
+  if (itemType) records = records.filter(r => (r.itemType || 'sticker') === itemType);
   res.json({ success: true, records });
 });
 
-// POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type}] }
+// POST /api/history  { env, items: [{copywriting,theme,imageDataUrl,type,itemType}] }
 app.post('/api/history', (req, res) => {
   const { env = 'test', items = [] } = req.body;
   if (!items.length) return res.json({ success: true });
@@ -621,6 +655,7 @@ app.post('/api/history', (req, res) => {
       theme: item.theme || '',
       imageDataUrl: item.imageDataUrl || '',
       type: item.type || 'similar',
+      itemType: item.itemType || 'sticker',
       env: (env === 'prod' || env === 'production') ? 'prod' : 'test',
     });
   });
