@@ -415,24 +415,26 @@ function buildBottlePrompt(copywriting, theme, hasReferenceImg, insertedImageB64
   const bottleCore = `*** CRITICAL FORMAT REQUIREMENT ***
 The output image MUST be a WIDE HORIZONTAL rectangle — width is approximately 4 times the height (e.g., 1200×300 px). This is a water bottle label sticker (23cm × 6cm), like a band that wraps around a bottle. Do NOT generate a square, portrait, or 16:9 image.
 
-*** MANDATORY 3-PANEL LAYOUT ***
-Divide the label into THREE equal vertical panels arranged left-to-right:
+*** MANDATORY LAYOUT — NO DIVIDING LINES ***
+Arrange elements across the label as ONE seamless continuous composition — absolutely NO visible dividing lines, borders, or separators between sections. The label is one unbroken image.
 
-PANEL 1 (left third):
+LEFT ZONE (left third of label):
 - A decorative illustration motif (flowers, balloons, crown, cake, etc.) — medium size, elegant
 - The label text rendered in a smaller, refined font beneath or beside the motif
 - Surrounded by scattered sparkles, glitter dots, and small confetti pieces
 
-PANEL 2 (center third) — THE HERO PANEL:
-- The SAME label text rendered LARGER and more prominently than panels 1 & 3
+CENTER ZONE (middle third) — THE HERO:
+- The SAME label text rendered LARGER and more prominently than the side zones
 - A decorative frame around the text: oval, diamond, or circular ornate border in gold/rose-gold metallic
-- The central illustration motif is GRANDER and more elaborate than the side panels — more detail, more decoration
+- The central illustration motif is GRANDER and more elaborate — more detail, more decoration
 - Fine metallic filigree or floral vine lines extending from the frame
 - Gold or pearl shimmer on the text
 
-PANEL 3 (right third):
-- EXACTLY SYMMETRICAL to Panel 1 — identical motif, identical text, identical size and style, mirrored horizontally
-- The left and right panels must look like perfect mirror images of each other
+RIGHT ZONE (right third of label):
+- EXACTLY SYMMETRICAL to the left zone — identical motif, identical text, identical size and style, mirrored horizontally
+- The left and right zones must look like perfect mirror images of each other
+
+CRITICAL: There must be NO lines, borders, or visual separators between the left/center/right zones. Elements should blend naturally into each other with only decorative scatter (sparkles, confetti, glitter) filling the transitions.
 
 *** MANDATORY DECORATIVE ELEMENTS (must appear throughout) ***
 1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge, spread across the full width
