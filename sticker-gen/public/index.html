@@ -2404,7 +2404,7 @@ function renderHistoryGrid() {
         '<div class="hd-item-check">' + (isSelected ? '&#10004;' : '') + '</div>' +
         '<button class="hd-item-dl" onclick="historyDownloadOne(\'' + rec.id + '\', event)" title="下载">⬇️</button>' +
         '<div class="hd-type-badge" style="background:' + typeBg + '">' + typeLabel + '</div>' +
-        '<img src="' + rec.imageDataUrl + '" alt="' + (rec.copywriting||'').replace(/"/g,'&quot;') + '" decoding="async">' +
+        '<img src="' + (rec.imageUrl || rec.imageDataUrl || '') + '" alt="' + (rec.copywriting||'').replace(/"/g,'&quot;') + '" decoding="async" loading="lazy">' +
         '<div class="hd-item-info">' +
           '<div class="hd-item-copy">' + (rec.copywriting || rec.theme || '贴纸') + '</div>' +
           '<div class="hd-item-meta">' + (rec.theme ? rec.theme + ' · ' : '') + timeStr + '</div>' +
@@ -2456,9 +2456,10 @@ function historySelectNone() {
 function historyDownloadOne(id, e) {
   if (e) e.stopPropagation();
   const rec = historyRecords.find(r => r.id === id);
-  if (!rec || !rec.imageDataUrl) return;
+  const imgSrc = rec && (rec.imageUrl || rec.imageDataUrl);
+  if (!imgSrc) return;
   const a = document.createElement('a');
-  a.href = rec.imageDataUrl;
+  a.href = imgSrc;
   const label = (rec.copywriting || rec.theme || 'sticker').replace(/[^\w\u4e00-\u9fa5]/g, '_').slice(0, 20);
   const date = new Date(rec.createdAt).toISOString().slice(0, 10);
   a.download = label + '_' + date + '.png';

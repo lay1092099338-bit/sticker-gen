@@ -804,7 +804,9 @@ async function searchUnsplash(query) {
 
 // ── History storage ──────────────────────────────────────────────────────────
 const HISTORY_DIR = path.join(__dirname, 'history');
+const HISTORY_IMG_DIR = path.join(HISTORY_DIR, 'images');
 if (!fs.existsSync(HISTORY_DIR)) fs.mkdirSync(HISTORY_DIR, { recursive: true });
+if (!fs.existsSync(HISTORY_IMG_DIR)) fs.mkdirSync(HISTORY_IMG_DIR, { recursive: true });
 
 function historyFile(env) {
   const safe = (env === 'prod' || env === 'production') ? 'prod' : 'test';
@@ -818,8 +820,38 @@ function readHistory(env) {
 }
 
 function writeHistory(env, records) {
-  fs.writeFileSync(historyFile(env), JSON.stringify(records, null, 2), 'utf-8');
+  // Strip imageDataUrl before writing (images are stored as files now)
+  const slim = records.map(r => {
+    const { imageDataUrl, ...rest } = r;
+    return rest;
+  });
+  fs.writeFileSync(historyFile(env), JSON.stringify(slim, null, 2), 'utf-8');
 }
+
+// Save base64 image to file, return URL path
+function saveHistoryImage(id, dataUrl) {
+  try {
+    const matches = dataUrl.match(/^data:image\/([a-z]+);base64,(.+)$/i);
+    if (!matches) return null;
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const buf = Buffer.from(matches[2], 'base64');
+    const filename = `${id}.${ext}`;
+    fs.writeFileSync(path.join(HISTORY_IMG_DIR, filename), buf);
+    return `/api/history-img/${filename}`;
+  } catch { return null; }
+}
+
+// Serve history images
+app.get('/api/history-img/:filename', (req, res) => {
+  const filename = path.basename(req.params.filename); // prevent path traversal
+  const filepath = path.join(HISTORY_IMG_DIR, filename);
+  if (!fs.existsSync(filepath)) return res.status(404).send('Not found');
+  const ext = path.extname(filename).slice(1).toLowerCase();
+  const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+  res.setHeader('Content-Type', mime);
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable'); // images never change
+  fs.createReadStream(filepath).pipe(res);
+});
 
 // GET /api/history?env=test|prod&itemType=sticker|banner&limit=20&offset=0
 app.get('/api/history', (req, res) => {
@@ -841,12 +873,19 @@ app.post('/api/history', (req, res) => {
   const records = readHistory(env);
   const timestamp = Date.now();
   items.forEach(item => {
+    const id = `${timestamp}_${Math.random().toString(36).slice(2,8)}`;
+    // Save image as file, store URL path instead of raw base64
+    let imageUrl = item.imageDataUrl || '';
+    if (imageUrl && imageUrl.startsWith('data:')) {
+      const saved = saveHistoryImage(id, imageUrl);
+      if (saved) imageUrl = saved;
+    }
     records.unshift({
-      id: `${timestamp}_${Math.random().toString(36).slice(2,8)}`,
+      id,
       createdAt: new Date().toISOString(),
       copywriting: item.copywriting || '',
       theme: item.theme || '',
-      imageDataUrl: item.imageDataUrl || '',
+      imageUrl,          // file-based URL or original dataUrl fallback
       type: item.type || 'similar',
       itemType: item.itemType || 'sticker',
       env: (env === 'prod' || env === 'production') ? 'prod' : 'test',
@@ -863,6 +902,13 @@ app.delete('/api/history/:id', (req, res) => {
   const { id } = req.params;
   const env = req.query.env || 'test';
   let records = readHistory(env);
+  // Also delete the image file if it exists
+  const record = records.find(r => r.id === id);
+  if (record && record.imageUrl && record.imageUrl.startsWith('/api/history-img/')) {
+    const filename = path.basename(record.imageUrl);
+    const filepath = path.join(HISTORY_IMG_DIR, filename);
+    try { if (fs.existsSync(filepath)) fs.unlinkSync(filepath); } catch {}
+  }
   records = records.filter(r => r.id !== id);
   writeHistory(env, records);
   res.json({ success: true });
