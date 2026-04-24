@@ -195,10 +195,12 @@ app.post('/api/edit-image', async (req, res) => {
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
   if (!imageB64 || !instruction) return res.status(400).json({ success: false, error: 'Missing imageB64 or instruction' });
   try {
-    // Banner mode: use native wide-ratio model to preserve 6:1 aspect ratio
-    // Wrap instruction to ensure model knows it's editing a wide banner
-    const bannerInstruction = `This is a wide horizontal party banner (6:1 aspect ratio). ${instruction}\nIMPORTANT: Output must be a wide horizontal banner maintaining the same 6:1 wide aspect ratio. Do not crop or change the overall composition.`;
-    const result = (mode === 'banner')
+    // Banner/bottle mode: use native wide-ratio model to preserve aspect ratio
+    // Wrap instruction to ensure model knows it's editing a wide image
+    const isWide = (mode === 'banner' || mode === 'bottle');
+    const wideLabel = mode === 'bottle' ? 'water bottle label sticker (4:1 aspect ratio, 23x6cm)' : 'wide horizontal party banner (6:1 aspect ratio)';
+    const bannerInstruction = `This is a ${wideLabel}. ${instruction}\nIMPORTANT: Output must maintain the same wide horizontal aspect ratio. Do not crop or change the overall composition.`;
+    const result = isWide
       ? await callModelverseBanner(effectiveKey, bannerInstruction, imageB64, null)
       : await callImageEdit(effectiveKey, imageB64, instruction);
     res.json({ success: true, imageUrl: result });
@@ -218,6 +220,8 @@ app.post('/api/generate-variant', async (req, res) => {
     const styleHintImg = insertedImageB64 || referenceImageB64;
     const prompt = (mode === 'banner') 
       ? buildBannerPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex)
+      : (mode === 'bottle')
+      ? buildBottlePrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex)
       : buildVariantPrompt(copywriting, theme, hasReferenceImg, styleHintImg, variantType, variantIndex);
 
     // If custom prompt set and creative type, use custom prompt
@@ -226,8 +230,8 @@ app.post('/api/generate-variant', async (req, res) => {
     // Pass referenceImageB64 as primary reference; insertedImageB64 as secondary overlay hint
     // Banner mode: use dedicated function with native wide aspect ratio (no crop needed)
     let result;
-    if (mode === 'banner') {
-      result = await callModelverseBanner(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
+    if (mode === 'banner' || mode === 'bottle') {
+      result = await callModelverseBanner(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64, mode);
     } else {
       result = await callModelverse(effectiveKey, finalPrompt, referenceImageB64, insertedImageB64);
     }
@@ -257,11 +261,13 @@ Please:
 
 Return the modified image.`;
 
-    const bannerPrompt = (mode === 'banner')
-      ? `This is a wide horizontal party banner (6:1 aspect ratio). ${prompt}\nIMPORTANT: Output must maintain the same wide horizontal 6:1 aspect ratio.`
+    const isWideMode = (mode === 'banner' || mode === 'bottle');
+    const wideRatioLabel = mode === 'bottle' ? '4:1' : '6:1';
+    const bannerPrompt = isWideMode
+      ? `This is a wide horizontal image (${wideRatioLabel} aspect ratio). ${prompt}\nIMPORTANT: Output must maintain the same wide horizontal ${wideRatioLabel} aspect ratio.`
       : prompt;
-    const result = (mode === 'banner')
-      ? await callModelverseBanner(effectiveKey, bannerPrompt, imageB64, null)
+    const result = isWideMode
+      ? await callModelverseBanner(effectiveKey, bannerPrompt, imageB64, null, mode)
       : await callImageEdit(effectiveKey, imageB64, prompt);
     res.json({ success: true, imageUrl: result });
   } catch(e) {
@@ -296,13 +302,19 @@ app.post('/api/generate-prompt', (req, res) => {
 app.post('/api/refine-prompt', async (req, res) => {
   const { currentPrompt, userInstruction, apiKey, mode } = req.body;
   const effectiveKey = (apiKey && apiKey.trim()) ? apiKey.trim() : SERVER_API_KEY;
-  const isBanner = mode === 'banner';
+  const isBanner = (mode === 'banner' || mode === 'bottle');
   const systemMsg = isBanner 
-    ? `You are an expert image generation prompt engineer for commercial Amazon party banners.
+    ? (mode === 'bottle'
+      ? `You are an expert image generation prompt engineer for commercial water bottle label stickers.
+Rewrite the given prompt incorporating the user's modification requirements.
+Keep core structure: wide horizontal rectangle (23x6cm, ~4:1), commercial birthday celebration style, princess/floral/balloon decorations, elegant typography for text, premium retail-quality sticker design.
+Never include hands, fingers, people, or body parts.
+Return ONLY the revised prompt, no explanations.`
+      : `You are an expert image generation prompt engineer for commercial Amazon party banners.
 Rewrite the given prompt incorporating the user's modification requirements.
 Keep core structure: wide horizontal banner (300x50cm, 6:1), hero number/word HUGE center with luxury texture (glitter/diamond/metallic), gradient background (lighter center, darker edges), sparkles and gem decorations in corners, small repeated numbers in background, elegant supporting text, premium print-ready commercial quality.
 Never include hands, fingers, people, or body parts.
-Return ONLY the revised prompt, no explanations.`
+Return ONLY the revised prompt, no explanations.`)
     : `You are an expert image generation prompt engineer for sticker design.
 Rewrite the given prompt incorporating the user's modification requirements.
 Keep core structure: circular sticker, 5x5cm, party celebration, illustration fills 100% of the circle edge-to-edge with zero white margins, theme-appropriate background color and accents, cute flat cartoon illustration style.
@@ -390,6 +402,64 @@ Do NOT add any text other than what is specified.`;
     return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/decoration inspiration ONLY. Do NOT copy its layout or aspect ratio. Recompose into a wide horizontal banner (6:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
   return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+}
+
+function buildBottlePrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
+  const textLine = copywriting
+    ? `The label text is: "${copywriting}". Render this text elegantly on the label. Do NOT change, add, or remove any words.`
+    : 'No text on this label.';
+  const themeLine = theme ? `Theme/motif: ${theme}.` : '';
+
+  const hasRef = hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100);
+
+  const bottleCore = `*** CRITICAL FORMAT REQUIREMENT ***
+The output image MUST be a WIDE HORIZONTAL rectangle — the width must be approximately 4 times the height (e.g., 1200x300 pixels). This is a water bottle label sticker (23cm × 6cm). Think of a horizontal band/strip that wraps around a bottle.
+
+Design a commercial water bottle label sticker for birthday celebrations (23cm × 6cm).
+
+This is a premium retail sticker product. Style requirements:
+- Wide horizontal label format — much wider than tall, like a band
+- Lush floral decorations (roses, peonies, leaves, petals) on both sides
+- Elegant princess/quinceanera style with balloons and crown elements
+- Soft gradient background that looks beautiful on a water bottle
+- Text and decorations arranged across the wide horizontal format
+- Background fills edge-to-edge with no white/empty space
+- Professional print-ready quality, premium commercial style
+- Similar style to birthday banner designs — romantic, celebratory, feminine elegance
+${hasRef ? '\nREFERENCE IMAGE: Use the reference image as STYLE INSPIRATION — take its color palette, floral arrangement style, and decorative elements, then adapt them to the wide horizontal label format.' : ''}
+
+Do NOT generate a square or portrait image. Must be wide and short (4:1 ratio).
+Do NOT include human hands, fingers, people, or body parts.
+Do NOT add any text other than what is specified.`;
+
+  const variantStrategies = [
+    {
+      label: 'Faithful Similar A',
+      hint: 'Stay very close to the reference style. Reproduce the same color palette, floral types, and decorative arrangement. Keep the overall elegant mood identical. Only minor differences in flower placement.'
+    },
+    {
+      label: 'Faithful Similar B',
+      hint: 'Stay very close to the reference style. Same color palette and floral treatment. Slightly vary the decoration arrangement — swap heavier clusters from left to right side, or adjust flower density. Should feel like a sibling design.'
+    },
+    {
+      label: 'Subtle Variation',
+      hint: 'Keep the same design family but shift the color temperature slightly (e.g., warm rose to cool lavender, or deep purple to soft blush). Floral arrangement stays similar. Should feel like a fresh alternative from the same product line.'
+    },
+    {
+      label: 'New Color & Pattern Scheme',
+      hint: 'Use a COMPLETELY different color palette (e.g., if original is purple/pink, switch to navy/gold, or baby blue/silver, or red/white, or teal/blush). Redesign the floral and background elements to match the new palette. Same text and composition but visually distinct mood.'
+    },
+    {
+      label: 'Creative Style Exploration',
+      hint: 'Keep the same decorative element types from the reference but reimagine the overall look boldly. Change the color palette dramatically, try a new background gradient or pattern, refresh the floral arrangement style — while keeping premium quality. Should feel like a fresh premium reinterpretation.'
+    }
+  ];
+  const strategy = variantStrategies[variantIndex] || variantStrategies[0];
+
+  if (hasRef) {
+    return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/floral decoration inspiration ONLY. Recompose into a wide horizontal label (4:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  }
+  return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
@@ -538,8 +608,10 @@ async function callModelverse(apiKey, prompt, referenceImageB64, insertedImageB6
   });
 }
 
-// Banner-specific image generation: uses gemini-3.1-flash-image-preview with aspect_ratio for native wide output
-async function callModelverseBanner(apiKey, prompt, referenceImageB64, insertedImageB64) {
+// Banner/bottle-specific image generation: uses gemini-3.1-flash-image-preview with aspect_ratio for native wide output
+// mode='banner' => aspect_ratio 16:9 (6:1 content enforced via prompt)
+// mode='bottle' => aspect_ratio 4:1 (23x6cm bottle label)
+async function callModelverseBanner(apiKey, prompt, referenceImageB64, insertedImageB64, mode) {
   return new Promise((resolve, reject) => {
     let content;
     const hasRefImage = referenceImageB64 && referenceImageB64.length > 100;
@@ -566,7 +638,7 @@ async function callModelverseBanner(apiKey, prompt, referenceImageB64, insertedI
       model: 'gemini-3.1-flash-image-preview',
       messages: [{ role: 'user', content }],
       response_modalities: ['TEXT', 'IMAGE'],
-      generation_config: { aspect_ratio: '16:9' }
+      generation_config: { aspect_ratio: mode === 'bottle' ? '4:1' : '16:9' }
     };
     const body = JSON.stringify(bodyObj);
 

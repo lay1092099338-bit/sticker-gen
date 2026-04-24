@@ -20,6 +20,8 @@ header p{font-size:14px;opacity:.85;margin-top:6px}
 .mode-tab{flex:1;padding:14px 0;border:none;background:none;font-size:15px;font-weight:700;color:#9ca3af;cursor:pointer;transition:all .2s;letter-spacing:.3px}
 .mode-tab.active{color:#7c3aed;border-bottom:3px solid #7c3aed;background:#faf5ff;margin-bottom:-2.5px}
 .mode-tab:hover:not(.active){color:#6d28d9;background:#f5f3ff}
+#tabBottle.active{color:#0369a1;border-bottom-color:#0ea5e9;background:#e0f2fe}
+#tabBottle:hover:not(.active){color:#0369a1;background:#f0f9ff}
 /* Banner strip items: full width, auto height */
 .banner-strip-item{width:100%!important;max-width:100%!important;flex-shrink:1!important}
 .banner-strip-item .strip-item-img-wrap{height:auto!important;min-height:30px;overflow:hidden!important}
@@ -279,6 +281,7 @@ tr:hover td{background:var(--pink-light)}
 <div id="modeTabBar">
   <button id="tabSticker" class="mode-tab active" onclick="switchMode('sticker')">🔵 圆形贴纸</button>
   <button id="tabBanner" class="mode-tab" onclick="switchMode('banner')">🟣 横幅</button>
+  <button id="tabBottle" class="mode-tab" onclick="switchMode('bottle')">💧 水瓶贴纸</button>
 </div>
 
 <!-- HISTORY PANEL -->
@@ -627,7 +630,7 @@ tr:hover td{background:var(--pink-light)}
 <script>
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let cardStates = [];
-let currentMode = 'sticker'; // 'sticker' | 'banner'
+let currentMode = 'sticker'; // 'sticker' | 'banner' | 'bottle'
 // {index,copywriting,theme,referenceImgUrl,referenceImageB64,insertedImageB64,insertedImageUrl,style,status,imageDataUrl,customPrompt}
 
 const STYLES=[
@@ -648,9 +651,10 @@ function getEmoji(t){if(!t)return'🎀';for(const[k,v]of Object.entries(THEME_EM
 
 function switchMode(mode) {
   currentMode = mode;
-  document.body.classList.toggle('banner-mode', mode === 'banner');
+  document.body.classList.toggle('banner-mode', mode === 'banner' || mode === 'bottle');
   document.getElementById('tabSticker').classList.toggle('active', mode === 'sticker');
   document.getElementById('tabBanner').classList.toggle('active', mode === 'banner');
+  document.getElementById('tabBottle').classList.toggle('active', mode === 'bottle');
   if (mode === 'banner') {
     document.documentElement.style.setProperty('--bg', '#f5f3ff');
     document.documentElement.style.setProperty('--border', '#e9d5ff');
@@ -659,6 +663,14 @@ function switchMode(mode) {
     document.documentElement.style.setProperty('--pink-dark', '#7c3aed');
     document.getElementById('pageTitle').textContent = '🟣 横幅批量生成器';
     document.getElementById('pageSubtitle').textContent = '上传 Excel · 批量生成 300×50cm 横幅 · AI 编辑导出';
+  } else if (mode === 'bottle') {
+    document.documentElement.style.setProperty('--bg', '#f0f9ff');
+    document.documentElement.style.setProperty('--border', '#bae6fd');
+    document.documentElement.style.setProperty('--pink', '#0ea5e9');
+    document.documentElement.style.setProperty('--pink-light', '#e0f2fe');
+    document.documentElement.style.setProperty('--pink-dark', '#0369a1');
+    document.getElementById('pageTitle').textContent = '💧 水瓶贴纸批量生成器';
+    document.getElementById('pageSubtitle').textContent = '上传 Excel · 批量生成 23×6cm 水瓶贴纸 · AI 编辑导出';
   } else {
     document.documentElement.style.setProperty('--bg', '#fff5f9');
     document.documentElement.style.setProperty('--border', '#fbc4d9');
@@ -981,14 +993,14 @@ function renderThemeStrip(theme) {
     if (!c.generatedImages || !c.generatedImages.length) {
       // Show preview placeholder or generating spinner
       if (c.status === 'generating') {
-        items.push(`<div class="strip-item generating-placeholder${currentMode==='banner'?' banner-strip-item':''}">
+        items.push(`<div class="strip-item generating-placeholder${currentMode==='banner'||currentMode==='bottle'?' banner-strip-item':''}">
           <div style="font-size:28px;animation:pulse 1.2s infinite">⏳</div>
           <div style="font-size:11px;color:#be185d;font-weight:600">生成中...</div>
           <div class="preview-copy">${copy}</div>
         </div>`);
       } else {
         // Pre-generation preview: emoji + copywriting
-        items.push(`<div class="strip-item preview-placeholder${currentMode==='banner'?' banner-strip-item':''}" onclick="generateSingle(${i})" title="点击单独生成">
+        items.push(`<div class="strip-item preview-placeholder${currentMode==='banner'||currentMode==='bottle'?' banner-strip-item':''}" onclick="generateSingle(${i})" title="点击单独生成">
           <div class="preview-emoji">${emoji}</div>
           <div class="preview-copy">${copy}</div>
           <div class="preview-hint">点击生成 ▶</div>
@@ -1003,7 +1015,7 @@ function renderThemeStrip(theme) {
       const label = `${copy.slice(0,10)} · ${typeLabel}`;
       const isActive = img.url === c.imageDataUrl;
       const badgeBg = img.type==='edited'?'#7c3aed':img.type==='similar'?'#be185d':'#059669';
-      items.push(`<div class="strip-item${isActive?' active':''}${currentMode==='banner'?' banner-strip-item':''}" title="${label}">
+      items.push(`<div class="strip-item${isActive?' active':''}${currentMode==='banner'||currentMode==='bottle'?' banner-strip-item':''}" title="${label}">
         <div class="strip-item-img-wrap" id="imgwrap-${i}-${idx}">
           <img src="${img.url}" alt="${label}"
             onclick="handleStripImgClick(event,${i},${idx})"
@@ -2476,7 +2488,7 @@ async function historyConfirmClear() {
 function openHistoryPanel() {
   const panel = document.getElementById('historyPanel');
   panel.classList.add('show');
-  document.getElementById('hdGrid').classList.toggle('banner-history', currentMode === 'banner');
+  document.getElementById('hdGrid').classList.toggle('banner-history', currentMode === 'banner' || currentMode === 'bottle');
   loadHistory(historyEnv);
 }
 
