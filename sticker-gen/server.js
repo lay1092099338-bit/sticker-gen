@@ -431,8 +431,9 @@ CENTER ZONE (middle third) — THE HERO:
 - Gold or pearl shimmer on the text
 
 RIGHT ZONE (right third of label):
-- EXACTLY SYMMETRICAL to the left zone — identical motif, identical text, identical size and style, mirrored horizontally
-- The left and right zones must look like perfect mirror images of each other
+- Same CATEGORY of motif as the left zone (e.g., both are floral, both are balloon-and-crown, etc.) but with natural variation in detail: different flower species, slightly different arrangement, facing the opposite direction
+- Same text, same text size and font style as the left zone
+- The left and right zones should feel like a balanced pair — harmonious and symmetrical in weight and composition, but NOT identical clones
 
 CRITICAL: There must be NO lines, borders, or visual separators between the left/center/right zones. Elements should blend naturally into each other with only decorative scatter (sparkles, confetti, glitter) filling the transitions.
 
