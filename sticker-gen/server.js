@@ -431,9 +431,8 @@ CENTER ZONE (middle third) — THE HERO:
 - Gold or pearl shimmer on the text
 
 RIGHT ZONE (right third of label):
-- Same CATEGORY of motif as the left zone (e.g., both are floral, both are balloon-and-crown, etc.) but with natural variation in detail: different flower species, slightly different arrangement, facing the opposite direction
-- Same text, same text size and font style as the left zone
-- The left and right zones should feel like a balanced pair — harmonious and symmetrical in weight and composition, but NOT identical clones
+- IDENTICAL to the left zone — same motif, same text, same size, mirrored horizontally so the two sides are perfectly symmetrical
+- The label must look balanced and unified when viewed as a whole
 
 CRITICAL: There must be NO lines, borders, or visual separators between the left/center/right zones. Elements should blend naturally into each other with only decorative scatter (sparkles, confetti, glitter) filling the transitions.
 
@@ -441,7 +440,7 @@ CRITICAL: There must be NO lines, borders, or visual separators between the left
 1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge, spread across the full width
 2. SPARKLES: Small 4-pointed or 6-pointed star sparkles scattered across the full label width
 3. CONFETTI: Tiny round or rectangular confetti pieces in coordinating colors
-4. BORDER LINES: Thin decorative pearl or metallic lines running horizontally near the top and bottom edges, framing the content
+4. BORDER DECORATION: A decorative horizontal band or border running along the top and bottom edges of the label. The style of this border should match the overall theme — for example: floral vine border, lace trim, ribbon bow trim, star garland, dot border, or any ornamental pattern that fits the mood. Draw inspiration from the reference image if provided. Do NOT use plain solid lines.
 5. UNIFIED BACKGROUND: One consistent solid or very subtly textured background color across the ENTIRE label — do NOT use different colors or brightness levels between panels. The background must be uniform from left edge to right edge.
 
 *** STYLE RULES ***
