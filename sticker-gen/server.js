@@ -431,21 +431,20 @@ PANEL 2 (center third) — THE HERO PANEL:
 - Gold or pearl shimmer on the text
 
 PANEL 3 (right third):
-- Mirror or complement of Panel 1 — same motif category, slightly varied arrangement
-- Same text size and style as Panel 1
-- Same sparkle/confetti/glitter scatter treatment
+- EXACTLY SYMMETRICAL to Panel 1 — identical motif, identical text, identical size and style, mirrored horizontally
+- The left and right panels must look like perfect mirror images of each other
 
 *** MANDATORY DECORATIVE ELEMENTS (must appear throughout) ***
-1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge
+1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge, spread across the full width
 2. SPARKLES: Small 4-pointed or 6-pointed star sparkles scattered across the full label width
 3. CONFETTI: Tiny round or rectangular confetti pieces in coordinating colors
 4. BORDER LINES: Thin decorative pearl or metallic lines running horizontally near the top and bottom edges, framing the content
-5. BACKGROUND GRADIENT: Center panel slightly lighter/brighter; outer panels slightly deeper — creates visual depth
+5. UNIFIED BACKGROUND: One consistent solid or very subtly textured background color across the ENTIRE label — do NOT use different colors or brightness levels between panels. The background must be uniform from left edge to right edge.
 
 *** STYLE RULES ***
 - Commercial print-ready quality, premium retail sticker
 - Background fills edge-to-edge, no white or empty space
-- All three panels share the same color palette and feel cohesive
+- ALL THREE panels share the exact same background color — the only difference between panels is illustration scale and frame (center is grander)
 - Do NOT include human hands, fingers, people, or body parts
 - Do NOT add any text other than what is specified above
 ${hasRef ? '\nSTYLE REFERENCE: Use the uploaded reference image ONLY for color palette, illustration style, and decoration type. Adapt everything into the 3-panel horizontal label format described above.' : ''}`;
