@@ -307,7 +307,7 @@ app.post('/api/refine-prompt', async (req, res) => {
     ? (mode === 'bottle'
       ? `You are an expert image generation prompt engineer for commercial water bottle label stickers.
 Rewrite the given prompt incorporating the user's modification requirements.
-Keep core structure: wide horizontal rectangle (23x6cm, ~4:1), THREE equal vertical panels (left motif+text, center hero panel with ornate frame+larger text+grander illustration, right mirrored motif+text), mandatory decorative elements (glitter drip from top, sparkles, confetti, horizontal pearl border lines, center-bright gradient background), premium retail-quality commercial sticker.
+Keep core structure: wide horizontal rectangle (23x6cm, ~4:1), THREE seamless zones (left motif+text, center hero with illustrated frame+larger text+bigger motif, right mirrored motif+text), cartoon or watercolor illustration style (NO glitter/sparkle/metallic/confetti effects), thematic border decoration along top and bottom edges, unified background color, premium retail-quality commercial sticker.
 Never include hands, fingers, people, or body parts.
 Return ONLY the revised prompt, no explanations.`
       : `You are an expert image generation prompt engineer for commercial Amazon party banners.
@@ -415,62 +415,70 @@ function buildBottlePrompt(copywriting, theme, hasReferenceImg, insertedImageB64
   const bottleCore = `*** CRITICAL FORMAT REQUIREMENT ***
 The output image MUST be a WIDE HORIZONTAL rectangle — width is approximately 4 times the height (e.g., 1200×300 px). This is a water bottle label sticker (23cm × 6cm), like a band that wraps around a bottle. Do NOT generate a square, portrait, or 16:9 image.
 
+*** ILLUSTRATION STYLE ***
+This product line sells cartoon and watercolor style stickers — NOT glitter or sparkle party designs.
+- CARTOON style: clean flat illustration with clear outlines, bold friendly shapes, bright solid colors, slightly stylized proportions. Looks like a printed children's book illustration or kawaii product label.
+- WATERCOLOR style: soft painterly brushstrokes, gentle color bleeding at edges, delicate washes, organic and artistic feel. Looks hand-painted.
+Choose the style that best matches the reference image. If no reference, default to a clean cartoon illustration style.
+Do NOT use: glitter effects, metallic shimmer, confetti scatter, or sparkle/glitter particle effects.
+
 *** MANDATORY LAYOUT — NO DIVIDING LINES ***
 Arrange elements across the label as ONE seamless continuous composition — absolutely NO visible dividing lines, borders, or separators between sections. The label is one unbroken image.
 
 LEFT ZONE (left third of label):
-- A decorative illustration motif (flowers, balloons, crown, cake, etc.) — medium size, elegant
-- The label text rendered in a smaller, refined font beneath or beside the motif
-- Surrounded by scattered sparkles, glitter dots, and small confetti pieces
+- A decorative illustration motif matching the theme (animals, flowers, characters, food, etc.) — medium size, cute and clear
+- The label text rendered in a matching font style (rounded friendly font for cartoon; handwritten-style for watercolor)
+- Small lightweight accents around the motif: tiny leaves, dots, small stars, or mini flowers — NO glitter or confetti
 
 CENTER ZONE (middle third) — THE HERO:
 - The SAME label text rendered LARGER and more prominently than the side zones
-- A decorative frame around the text: oval, diamond, or circular ornate border in gold/rose-gold metallic
-- The central illustration motif is GRANDER and more elaborate — more detail, more decoration
-- Fine metallic filigree or floral vine lines extending from the frame
-- Gold or pearl shimmer on the text
+- A decorative frame around the text matching the illustration style: a simple illustrated oval or badge shape (NOT metallic/gold), decorated with small motif elements
+- The central illustration motif is BIGGER and more detailed than the side zones
+- Text styling matches the overall illustration style (NOT metallic, NOT gold shimmer)
 
 RIGHT ZONE (right third of label):
 - IDENTICAL to the left zone — same motif, same text, same size, mirrored horizontally so the two sides are perfectly symmetrical
 - The label must look balanced and unified when viewed as a whole
 
-CRITICAL: There must be NO lines, borders, or visual separators between the left/center/right zones. Elements should blend naturally into each other with only decorative scatter (sparkles, confetti, glitter) filling the transitions.
+CRITICAL: There must be NO lines, borders, or visual separators between the left/center/right zones. Elements should blend naturally into each other.
 
-*** MANDATORY DECORATIVE ELEMENTS (must appear throughout) ***
-1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge, spread across the full width
-2. SPARKLES: Small 4-pointed or 6-pointed star sparkles scattered across the full label width
-3. CONFETTI: Tiny round or rectangular confetti pieces in coordinating colors
-4. BORDER DECORATION: A decorative horizontal band or border running along the top and bottom edges of the label. The style of this border should match the overall theme — for example: floral vine border, lace trim, ribbon bow trim, star garland, dot border, or any ornamental pattern that fits the mood. Draw inspiration from the reference image if provided. Do NOT use plain solid lines.
-5. UNIFIED BACKGROUND: One consistent solid or very subtly textured background color across the ENTIRE label — do NOT use different colors or brightness levels between panels. The background must be uniform from left edge to right edge.
+*** BORDER DECORATION ***
+Add a decorative border along the top and bottom edges of the label. The border style must match the illustration theme — for example:
+- Cartoon style: repeating small illustrated icons (stars, hearts, paw prints, dots, tiny flowers) forming a strip
+- Watercolor style: a delicate painted floral vine or leaf garland
+Draw from the reference image for border inspiration. Do NOT use plain solid lines or metallic borders.
+
+*** BACKGROUND ***
+One consistent, unified background color or very soft texture across the ENTIRE label width — no gradient that changes between zones. Color should complement the illustration palette.
 
 *** STYLE RULES ***
-- Commercial print-ready quality, premium retail sticker
+- Commercial print-ready quality, clean and professional
 - Background fills edge-to-edge, no white or empty space
-- ALL THREE panels share the exact same background color — the only difference between panels is illustration scale and frame (center is grander)
 - Do NOT include human hands, fingers, people, or body parts
 - Do NOT add any text other than what is specified above
-${hasRef ? '\nSTYLE REFERENCE: Use the uploaded reference image ONLY for color palette, illustration style, and decoration type. Adapt everything into the 3-panel horizontal label format described above.' : ''}`;
+- Do NOT use glitter, metallic shimmer, sparkles, or confetti
+${hasRef ? '\nSTYLE REFERENCE: Use the uploaded reference image to determine the illustration style (cartoon vs watercolor), color palette, motif type, and border decoration. Adapt everything into the 3-zone horizontal label format described above.' : ''}`;
 
   const variantStrategies = [
     {
       label: 'Faithful Similar A',
-      hint: 'Stay very close to the reference style. Reproduce the same color palette, motif types, and decoration density. Keep the 3-panel layout intact. Only minor differences in element placement within each panel.'
+      hint: 'Stay very close to the reference style. Reproduce the same illustration technique (cartoon or watercolor), color palette, and motif types. Only minor differences in element placement or pose.'
     },
     {
       label: 'Faithful Similar B',
-      hint: 'Very close to reference style. Same palette and motif category. Vary the arrangement within panels slightly — e.g., flip the side motif orientation, adjust sparkle density, or shift the center frame shape from oval to diamond. Should feel like a sibling design.'
+      hint: 'Very close to reference style. Same illustration technique and palette. Slightly vary the motif arrangement — e.g., flip the side motif direction, adjust the center frame shape, or add one small extra accent element. Should feel like a sibling design from the same product line.'
     },
     {
-      label: 'Subtle Variation',
-      hint: 'Same design family, shift color temperature slightly (e.g., warm rose → cool lavender, deep purple → soft blush). Keep the 3-panel structure and motif types. Adjust glitter and confetti colors to match the new palette. Feels like a fresh alternative from the same product line.'
+      label: 'Subtle Color Variation',
+      hint: 'Keep the same illustration technique and motif category. Shift the color palette slightly — e.g., warm rose → cool lavender, mint green → sky blue, coral → peach. Accent colors and border decoration adjust to match. Feels like a fresh colorway from the same line.'
     },
     {
-      label: 'New Color & Pattern Scheme',
-      hint: 'Use a COMPLETELY different color palette (e.g., if reference is purple/pink → switch to navy/gold, baby blue/silver, red/white, or teal/blush). Redesign background gradient and decorative elements to match. Same 3-panel layout and text, but visually distinct mood.'
+      label: 'New Color Scheme',
+      hint: 'Use a COMPLETELY different color palette while keeping the same illustration technique and motif category. Example: if reference is pink/purple → switch to teal/yellow, navy/white, red/cream, or sage/gold-yellow. Same layout structure, visually distinct mood.'
     },
     {
       label: 'Creative Style Exploration',
-      hint: 'Keep the 3-panel structure and all mandatory decorative elements, but reimagine the overall look boldly. Try a dramatically different color palette, a new motif category that fits the theme, a different center frame style, and a fresh background treatment. Premium quality throughout — feels like a genuine reinterpretation, not just a color swap.'
+      hint: 'Keep the 3-zone layout structure. Switch the illustration style: if the reference is cartoon, try a loose watercolor interpretation; if watercolor, try a cleaner cartoon approach. Also try a fresh motif within the same theme category and a new background color. Should feel like a genuine creative reinterpretation of the same product.'
     }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
