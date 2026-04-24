@@ -307,7 +307,7 @@ app.post('/api/refine-prompt', async (req, res) => {
     ? (mode === 'bottle'
       ? `You are an expert image generation prompt engineer for commercial water bottle label stickers.
 Rewrite the given prompt incorporating the user's modification requirements.
-Keep core structure: wide horizontal rectangle (23x6cm, ~4:1), commercial birthday celebration style, princess/floral/balloon decorations, elegant typography for text, premium retail-quality sticker design.
+Keep core structure: wide horizontal rectangle (23x6cm, ~4:1), THREE equal vertical panels (left motif+text, center hero panel with ornate frame+larger text+grander illustration, right mirrored motif+text), mandatory decorative elements (glitter drip from top, sparkles, confetti, horizontal pearl border lines, center-bright gradient background), premium retail-quality commercial sticker.
 Never include hands, fingers, people, or body parts.
 Return ONLY the revised prompt, no explanations.`
       : `You are an expert image generation prompt engineer for commercial Amazon party banners.
@@ -406,58 +406,76 @@ Do NOT add any text other than what is specified.`;
 
 function buildBottlePrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
   const textLine = copywriting
-    ? `The label text is: "${copywriting}". Render this text elegantly on the label. Do NOT change, add, or remove any words.`
+    ? `Label text to display: "${copywriting}". Render EXACTLY this text — do NOT change, add, or remove any words.`
     : 'No text on this label.';
   const themeLine = theme ? `Theme/motif: ${theme}.` : '';
 
   const hasRef = hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100);
 
   const bottleCore = `*** CRITICAL FORMAT REQUIREMENT ***
-The output image MUST be a WIDE HORIZONTAL rectangle — the width must be approximately 4 times the height (e.g., 1200x300 pixels). This is a water bottle label sticker (23cm × 6cm). Think of a horizontal band/strip that wraps around a bottle.
+The output image MUST be a WIDE HORIZONTAL rectangle — width is approximately 4 times the height (e.g., 1200×300 px). This is a water bottle label sticker (23cm × 6cm), like a band that wraps around a bottle. Do NOT generate a square, portrait, or 16:9 image.
 
-Design a commercial water bottle label sticker for birthday celebrations (23cm × 6cm).
+*** MANDATORY 3-PANEL LAYOUT ***
+Divide the label into THREE equal vertical panels arranged left-to-right:
 
-This is a premium retail sticker product. Style requirements:
-- Wide horizontal label format — much wider than tall, like a band
-- Lush floral decorations (roses, peonies, leaves, petals) on both sides
-- Elegant princess/quinceanera style with balloons and crown elements
-- Soft gradient background that looks beautiful on a water bottle
-- Text and decorations arranged across the wide horizontal format
-- Background fills edge-to-edge with no white/empty space
-- Professional print-ready quality, premium commercial style
-- Similar style to birthday banner designs — romantic, celebratory, feminine elegance
-${hasRef ? '\nREFERENCE IMAGE: Use the reference image as STYLE INSPIRATION — take its color palette, floral arrangement style, and decorative elements, then adapt them to the wide horizontal label format.' : ''}
+PANEL 1 (left third):
+- A decorative illustration motif (flowers, balloons, crown, cake, etc.) — medium size, elegant
+- The label text rendered in a smaller, refined font beneath or beside the motif
+- Surrounded by scattered sparkles, glitter dots, and small confetti pieces
 
-Do NOT generate a square or portrait image. Must be wide and short (4:1 ratio).
-Do NOT include human hands, fingers, people, or body parts.
-Do NOT add any text other than what is specified.`;
+PANEL 2 (center third) — THE HERO PANEL:
+- The SAME label text rendered LARGER and more prominently than panels 1 & 3
+- A decorative frame around the text: oval, diamond, or circular ornate border in gold/rose-gold metallic
+- The central illustration motif is GRANDER and more elaborate than the side panels — more detail, more decoration
+- Fine metallic filigree or floral vine lines extending from the frame
+- Gold or pearl shimmer on the text
+
+PANEL 3 (right third):
+- Mirror or complement of Panel 1 — same motif category, slightly varied arrangement
+- Same text size and style as Panel 1
+- Same sparkle/confetti/glitter scatter treatment
+
+*** MANDATORY DECORATIVE ELEMENTS (must appear throughout) ***
+1. GLITTER DRIP: Fine gold/silver glitter particles drifting downward from the top edge
+2. SPARKLES: Small 4-pointed or 6-pointed star sparkles scattered across the full label width
+3. CONFETTI: Tiny round or rectangular confetti pieces in coordinating colors
+4. BORDER LINES: Thin decorative pearl or metallic lines running horizontally near the top and bottom edges, framing the content
+5. BACKGROUND GRADIENT: Center panel slightly lighter/brighter; outer panels slightly deeper — creates visual depth
+
+*** STYLE RULES ***
+- Commercial print-ready quality, premium retail sticker
+- Background fills edge-to-edge, no white or empty space
+- All three panels share the same color palette and feel cohesive
+- Do NOT include human hands, fingers, people, or body parts
+- Do NOT add any text other than what is specified above
+${hasRef ? '\nSTYLE REFERENCE: Use the uploaded reference image ONLY for color palette, illustration style, and decoration type. Adapt everything into the 3-panel horizontal label format described above.' : ''}`;
 
   const variantStrategies = [
     {
       label: 'Faithful Similar A',
-      hint: 'Stay very close to the reference style. Reproduce the same color palette, floral types, and decorative arrangement. Keep the overall elegant mood identical. Only minor differences in flower placement.'
+      hint: 'Stay very close to the reference style. Reproduce the same color palette, motif types, and decoration density. Keep the 3-panel layout intact. Only minor differences in element placement within each panel.'
     },
     {
       label: 'Faithful Similar B',
-      hint: 'Stay very close to the reference style. Same color palette and floral treatment. Slightly vary the decoration arrangement — swap heavier clusters from left to right side, or adjust flower density. Should feel like a sibling design.'
+      hint: 'Very close to reference style. Same palette and motif category. Vary the arrangement within panels slightly — e.g., flip the side motif orientation, adjust sparkle density, or shift the center frame shape from oval to diamond. Should feel like a sibling design.'
     },
     {
       label: 'Subtle Variation',
-      hint: 'Keep the same design family but shift the color temperature slightly (e.g., warm rose to cool lavender, or deep purple to soft blush). Floral arrangement stays similar. Should feel like a fresh alternative from the same product line.'
+      hint: 'Same design family, shift color temperature slightly (e.g., warm rose → cool lavender, deep purple → soft blush). Keep the 3-panel structure and motif types. Adjust glitter and confetti colors to match the new palette. Feels like a fresh alternative from the same product line.'
     },
     {
       label: 'New Color & Pattern Scheme',
-      hint: 'Use a COMPLETELY different color palette (e.g., if original is purple/pink, switch to navy/gold, or baby blue/silver, or red/white, or teal/blush). Redesign the floral and background elements to match the new palette. Same text and composition but visually distinct mood.'
+      hint: 'Use a COMPLETELY different color palette (e.g., if reference is purple/pink → switch to navy/gold, baby blue/silver, red/white, or teal/blush). Redesign background gradient and decorative elements to match. Same 3-panel layout and text, but visually distinct mood.'
     },
     {
       label: 'Creative Style Exploration',
-      hint: 'Keep the same decorative element types from the reference but reimagine the overall look boldly. Change the color palette dramatically, try a new background gradient or pattern, refresh the floral arrangement style — while keeping premium quality. Should feel like a fresh premium reinterpretation.'
+      hint: 'Keep the 3-panel structure and all mandatory decorative elements, but reimagine the overall look boldly. Try a dramatically different color palette, a new motif category that fits the theme, a different center frame style, and a fresh background treatment. Premium quality throughout — feels like a genuine reinterpretation, not just a color swap.'
     }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasRef) {
-    return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/floral decoration inspiration ONLY. Recompose into a wide horizontal label (4:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
   }
   return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
 }
