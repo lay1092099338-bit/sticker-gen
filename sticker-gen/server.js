@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json({ limit: '20mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const SERVER_API_KEY = process.env.MODELVERSE_API_KEY || 'PCB0tVVbpBTVCYhf6f7eB3A9-dAeE-4c84-9BeE-D58f7dC9';
+const SERVER_API_KEY = process.env.MODELVERSE_API_KEY || '';
 
 // ── Extract embedded images from xlsx buffer ─────────────────────────────────
 // Returns: { [rowIndex]: base64DataUrl }  (rowIndex is 0-based, matching sheet_to_json rows)
