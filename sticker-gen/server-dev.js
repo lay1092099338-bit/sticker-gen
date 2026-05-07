@@ -1093,7 +1093,7 @@ async function cropToBannerRatio(dataUrl) {
   return 'data:image/png;base64,' + processed.toString('base64');
 }
 
-const PORT = process.env.PORT || 7788;
+const PORT = process.env.PORT || 7789;
 
 // Env detection: port 7788 = prod, anything else (e.g. 7789) = test
 const CURRENT_ENV = (parseInt(PORT) === 7788) ? 'prod' : 'test';
