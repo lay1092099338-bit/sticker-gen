@@ -387,21 +387,13 @@ Do NOT add any text other than what is specified.`;
       label: 'Subtle Variation',
       hint: 'Keep the same design family but shift the color temperature slightly (e.g., warm purple to cool lavender, or deep navy to royal blue). Text texture stays similar. Adjust decorative density. Should feel like a fresh alternative from the same product line.'
     },
-    {
-      label: 'New Color & Pattern Scheme',
-      hint: 'Use a COMPLETELY different color palette (e.g., if original is purple/silver, switch to navy/gold, or rose-gold/blush, or black/gold, or teal/silver). Redesign the gradient and decorative elements to match the new palette. Same text content and hierarchy but visually distinct mood.'
-    },
-    {
-      label: 'Creative Style Exploration',
-      hint: 'Keep the same decorative element types and style from the reference image, but reimagine the overall visual direction boldly. Change the color palette dramatically, try a different gradient angle or background treatment, and apply a fresh text texture — while keeping the same category of decorations (if reference has gems, still use gems but styled differently; if it has balloons, still use balloons in new colors). The result should feel like a premium reinterpretation, not a copy and not a completely unrelated design.'
-    }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasRef) {
-    return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/decoration inspiration ONLY. Do NOT copy its layout or aspect ratio. Recompose into a wide horizontal banner (6:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nUse the reference image for style/color/decoration inspiration ONLY. Do NOT copy its layout or aspect ratio. Recompose into a wide horizontal banner (6:1 ratio).\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
   }
-  return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  return `${bannerCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
 }
 
 function buildBottlePrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
@@ -472,21 +464,13 @@ ${hasRef ? '\nSTYLE REFERENCE: Use the uploaded reference image to determine the
       label: 'Subtle Color Variation',
       hint: 'Keep the same illustration technique and motif category. Shift the color palette slightly — e.g., warm rose → cool lavender, mint green → sky blue, coral → peach. Accent colors and border decoration adjust to match. Feels like a fresh colorway from the same line.'
     },
-    {
-      label: 'New Color Scheme',
-      hint: 'Use a COMPLETELY different color palette while keeping the same illustration technique and motif category. Example: if reference is pink/purple → switch to teal/yellow, navy/white, red/cream, or sage/gold-yellow. Same layout structure, visually distinct mood.'
-    },
-    {
-      label: 'Creative Style Exploration',
-      hint: 'Keep the 3-zone layout structure. Switch the illustration style: if the reference is cartoon, try a loose watercolor interpretation; if watercolor, try a cleaner cartoon approach. Also try a fresh motif within the same theme category and a new background color. Should feel like a genuine creative reinterpretation of the same product.'
-    }
   ];
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasRef) {
-    return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
   }
-  return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  return `${bottleCore}\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
 }
 
 function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB64, variantType, variantIndex) {
@@ -522,23 +506,15 @@ function buildVariantPrompt(copywriting, theme, hasReferenceImg, insertedImageB6
       label: 'Subtle Variation',
       hint: 'Keep the same illustration style but apply subtle variation: shift the color tones slightly warmer or cooler, adjust element details and textures. Should feel like a fresh alternative from the same design family.'
     },
-    {
-      label: 'New Color & Pattern Scheme',
-      hint: 'Use a completely different color palette (e.g. if original is warm yellow/green, switch to cool blue/purple or bold red/orange). Redesign the decorative pattern arrangement to match the new palette. The theme and text stay the same but the visual mood should feel distinctly different.'
-    },
-    {
-      label: 'Creative Style Exploration',
-      hint: `Reimagine the sticker in this specific style: ${pickedStyle}. Keep the same theme and text, but fully commit to this new visual style. The result should feel like a genuinely different design direction, not just a color swap.`
-    }
   ];
 
   const strategy = variantStrategies[variantIndex] || variantStrategies[0];
 
   if (hasReferenceImg || (insertedImageB64 && insertedImageB64.length > 100)) {
-    return `Look at the reference image. Create a circular sticker based on it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\nDo not add any text other than what is specified above. Do not include human hands or body parts.\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+    return `Look at the reference image. Create a circular sticker based on it.\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\nDo not add any text other than what is specified above. Do not include human hands or body parts.\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
   }
 
-  return `Create a circular sticker design (5x5cm).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 5 -- ${strategy.label}]`;
+  return `Create a circular sticker design (5x5cm).\n\n${themeLine}\n${textLine}\n\nVariant direction: ${strategy.hint}\n\n${printQuality}\n${circleRule}\n- Do not add any text other than specified above\n- Do not include human hands or body parts\n\n[Variant ${variantIndex + 1} of 3 -- ${strategy.label}]`;
 }
 async function callImageEdit(apiKey, imageB64, instruction) {
   // Use Gemini 3 Pro via chat/completions (same as callModelverse)
